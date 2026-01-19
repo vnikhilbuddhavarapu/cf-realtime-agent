@@ -1,0 +1,14 @@
+# Cloudflare Account Configuration
+ACCOUNT_ID=your_cloudflare_account_id_here
+API_TOKEN=your_cloudflare_api_token_here
+REALTIME_APP_ID=your_realtime_app_id_here
+
+# Speech-to-Text (Deepgram)
+DEEPGRAM_API_KEY=your_deepgram_api_key_here
+
+# Text-to-Speech (ElevenLabs)
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+
+# Optional: ElevenLabs Voice IDs
+ELEVENLABS_VOICE_FEMALE=21m00Tcm4TlvDq8ikWAM
+ELEVENLABS_VOICE_MALE=29vD33N1CtxCmqQRPOHJ

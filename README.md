@@ -1,69 +1,72 @@
-# React + TypeScript + Vite
+# AI Interview Coach
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Real-time AI-powered interview practice platform built on Cloudflare's edge infrastructure.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend**: React + TypeScript + Vite + TailwindCSS
+- **Backend**: Cloudflare Workers + Durable Objects
+- **Real-time**: RealtimeKit (WebRTC) for voice
+- **AI**: Workers AI (Llama 3.1), Deepgram STT, ElevenLabs TTS
+- **RAG**: Vectorize for resume/JD context
 
-## Expanding the ESLint configuration
+## Project Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```
+src/                          # React frontend
+├── components/
+│   ├── landing/              # Landing page
+│   ├── persona/              # Scenario & persona customization
+│   ├── preparation/          # Document upload (resume/JD)
+│   └── meeting/              # Interview room UI
+├── hooks/                    # React hooks (useSession)
+└── lib/                      # API client, types
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+worker/                       # Cloudflare Worker backend
+├── agents/                   # InterviewAgent (RealtimeAgent)
+├── routes/                   # API routes
+├── sessions/                 # SessionManager (Durable Object)
+├── rag/                      # RAG service (parse, chunk, index, query)
+└── utils/                    # RealtimeKit, logging utilities
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Architecture
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```
+┌─────────────┐    WebRTC     ┌──────────────────┐
+│   Browser   │◄────────────►│  RealtimeKit SFU │
+│  (React UI) │               └────────┬─────────┘
+└──────┬──────┘                        │
+       │ REST                          │ Audio
+       ▼                               ▼
+┌──────────────┐              ┌──────────────────┐
+│   Worker     │◄────────────►│  InterviewAgent  │
+│  (API Routes)│              │ (Durable Object) │
+└──────┬───────┘              └────────┬─────────┘
+       │                               │
+       ▼                               ▼
+┌──────────────┐              ┌──────────────────┐
+│ SessionMgr   │              │   AI Pipeline    │
+│ (DO + SQLite)│              │ STT→LLM→TTS      │
+└──────────────┘              └────────┬─────────┘
+                                       │
+                              ┌────────▼─────────┐
+                              │    Vectorize     │
+                              │  (RAG Context)   │
+                              └──────────────────┘
+```
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Setup
+
+1. Copy `.dev.vars.example` to `.dev.vars` and add API keys
+2. `npm install`
+3. `npm run dev` (local) or `npm run deploy` (production)
+
+## Environment Variables
+
+```
+REALTIMEKIT_API_KEY=       # Cloudflare RealtimeKit
+REALTIMEKIT_ORG_ID=        # RealtimeKit org ID
+DEEPGRAM_API_KEY=          # Speech-to-text
+ELEVENLABS_API_KEY=        # Text-to-speech
 ```
