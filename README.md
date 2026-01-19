@@ -2,11 +2,20 @@
 
 Real-time AI-powered interview practice platform built on Cloudflare's edge infrastructure.
 
+## Features
+
+- **Real-time Voice Interviews** - WebRTC-powered conversations with AI interviewers
+- **Customizable Personas** - Choose interviewer style, demeanor, and difficulty
+- **Multiple Scenarios** - Phone screens, technical rounds, behavioral interviews
+- **Document Upload** - Upload resume and job description for personalized questions
+- **RAG-Powered Context** - AI uses your background to ask relevant questions
+- **Real-time Coaching HUD** - Live insights, STAR progress tracking, and tips
+
 ## Tech Stack
 
 - **Frontend**: React + TypeScript + Vite + TailwindCSS
 - **Backend**: Cloudflare Workers + Durable Objects
-- **Real-time**: RealtimeKit (WebRTC) for voice
+- **Real-time**: RealtimeKit (WebRTC) for voice + WebSocket for insights
 - **AI**: Workers AI (Llama 3.1), Deepgram STT, ElevenLabs TTS
 - **RAG**: Vectorize for resume/JD context
 
@@ -18,12 +27,13 @@ src/                          # React frontend
 │   ├── landing/              # Landing page
 │   ├── persona/              # Scenario & persona customization
 │   ├── preparation/          # Document upload (resume/JD)
-│   └── meeting/              # Interview room UI
+│   └── meeting/              # Interview room + InsightsHUD
 ├── hooks/                    # React hooks (useSession)
 └── lib/                      # API client, types
 
 worker/                       # Cloudflare Worker backend
 ├── agents/                   # InterviewAgent (RealtimeAgent)
+├── insights/                 # InsightGenerator for real-time coaching
 ├── routes/                   # API routes
 ├── sessions/                 # SessionManager (Durable Object)
 ├── rag/                      # RAG service (parse, chunk, index, query)
@@ -55,6 +65,16 @@ worker/                       # Cloudflare Worker backend
                               │  (RAG Context)   │
                               └──────────────────┘
 ```
+
+## Real-time Insights HUD
+
+During interviews, a coaching sidebar provides:
+- **Coaching Tips** - Actionable advice based on your responses
+- **Question Type** - Classification (behavioral, technical, situational, etc.)
+- **STAR Progress** - For behavioral questions, tracks Situation/Task/Action/Result
+- **Live Transcript** - Real-time conversation log
+
+The InsightsHUD connects via WebSocket to receive updates from the InsightGenerator running in the Durable Object.
 
 ## Setup
 
