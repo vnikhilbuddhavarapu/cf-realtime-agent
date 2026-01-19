@@ -104,3 +104,73 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
 }
+
+// === INSIGHTS TYPES ===
+export type InsightType =
+  | "framework"
+  | "resume_highlight"
+  | "question_guidance"
+  | "recovery"
+  | "positive";
+
+export type InsightPriority = "high" | "medium" | "low";
+
+export type QuestionType =
+  | "behavioral"
+  | "technical"
+  | "situational"
+  | "competency"
+  | "motivation"
+  | "unknown";
+
+export interface STARProgress {
+  situation: boolean;
+  task: boolean;
+  action: boolean;
+  result: boolean;
+}
+
+export interface Insight {
+  id: string;
+  roleplayId: string;
+  timestamp: number;
+  type: InsightType;
+  priority: InsightPriority;
+  message: string;
+  context?: {
+    questionType?: QuestionType;
+    frameworkProgress?: STARProgress;
+    resumeReference?: string;
+    interviewerQuestion?: string;
+    userResponse?: string;
+  };
+  shown: boolean;
+}
+
+export interface TranscriptEntry {
+  id: string;
+  roleplayId: string;
+  timestamp: number;
+  speaker: "interviewer" | "user";
+  speakerName: string;
+  text: string;
+  isPartial: boolean;
+}
+
+export interface InsightsState {
+  roleplayId: string;
+  currentQuestionType: QuestionType;
+  starProgress: STARProgress;
+  insights: Insight[];
+  transcript: TranscriptEntry[];
+  lastInsightTime: number;
+}
+
+// WebSocket message types for insights
+export type InsightsWSMessage =
+  | { type: "insight"; data: Insight }
+  | { type: "transcript"; data: TranscriptEntry }
+  | { type: "star_progress"; data: STARProgress }
+  | { type: "question_type"; data: QuestionType }
+  | { type: "connected"; roleplayId: string }
+  | { type: "error"; message: string };

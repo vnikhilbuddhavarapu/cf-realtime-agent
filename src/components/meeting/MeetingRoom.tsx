@@ -1,8 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRealtimeKitClient } from '@cloudflare/realtimekit-react';
-import { RtkMeeting } from '@cloudflare/realtimekit-react-ui';
+import * as RtkUI from '@cloudflare/realtimekit-react-ui';
 import { createSession, createRoleplay, startMeeting, endMeeting } from '../../lib/api';
 import type { SessionState } from '../../lib/types';
+import { InsightsHUD } from './InsightsHUD';
+
+// RTK UI Kit components - types not fully exported but components exist at runtime
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RtkUiProvider = (RtkUI as unknown as Record<string, any>).RtkUiProvider;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RtkStage = (RtkUI as unknown as Record<string, any>).RtkStage;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RtkGrid = (RtkUI as unknown as Record<string, any>).RtkGrid;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RtkControlbar = (RtkUI as unknown as Record<string, any>).RtkControlbar;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RtkParticipantsAudio = (RtkUI as unknown as Record<string, any>).RtkParticipantsAudio;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RtkDialogManager = (RtkUI as unknown as Record<string, any>).RtkDialogManager;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const RtkNotifications = (RtkUI as unknown as Record<string, any>).RtkNotifications;
 
 interface MeetingRoomProps {
   session: SessionState;
@@ -14,6 +31,7 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
   const [loadingMessage, setLoadingMessage] = useState('Setting up your interview...');
   const [error, setError] = useState<string | null>(null);
   const [roleplayId, setRoleplayId] = useState<string | null>(null);
+  const [meetingId, setMeetingId] = useState<string | null>(null);
   const [meeting, initMeeting] = useRealtimeKitClient();
   const initStarted = useRef(false);
 
@@ -91,6 +109,9 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
         throw new Error(meetingResponse.error || 'Failed to start meeting');
       }
 
+      // Store meetingId for InsightsHUD WebSocket connection
+      setMeetingId(meetingResponse.data.meetingId);
+
       // Initialize RealtimeKit client with the auth token
       setLoadingMessage('Joining the interview room...');
       const meetingClient = await initMeeting({
@@ -152,7 +173,7 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
     );
   }
 
-  // Render the embedded RealtimeKit meeting UI
+  // Render the embedded RealtimeKit meeting UI with Insights sidebar
   if (meeting) {
     return (
       <div className="min-h-screen bg-[#0F0F0F] flex flex-col">
@@ -174,9 +195,38 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
           </button>
         </div>
         
-        {/* RealtimeKit Meeting UI */}
-        <div className="flex-1" style={{ height: 'calc(100vh - 80px)' }}>
-          <RtkMeeting meeting={meeting} />
+        {/* Main content: Custom Meeting UI with Insights Sidebar */}
+        <div className="flex-1 flex" style={{ height: 'calc(100vh - 80px)' }}>
+          {/* Custom Meeting UI - wrapped in RtkUiProvider for context */}
+          <RtkUiProvider
+            meeting={meeting}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              flex: 1,
+            }}
+          >
+            {/* Participant Grid */}
+            <RtkStage style={{ flex: 1 }}>
+              <RtkGrid />
+            </RtkStage>
+            
+            {/* Control Bar */}
+            <RtkControlbar style={{ display: 'flex', justifyContent: 'center' }} />
+            
+            {/* Required hidden components for audio and dialogs */}
+            <RtkParticipantsAudio />
+            <RtkDialogManager />
+            <RtkNotifications />
+          </RtkUiProvider>
+          
+          {/* Insights HUD Sidebar */}
+          <InsightsHUD
+            meetingId={meetingId}
+            duration={session.scenario?.duration || 15}
+            interviewerName={session.persona?.interviewerName || 'Interviewer'}
+            candidateName={session.persona?.candidateName || 'Candidate'}
+          />
         </div>
       </div>
     );

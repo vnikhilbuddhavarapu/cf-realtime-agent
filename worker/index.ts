@@ -46,6 +46,29 @@ export default {
       return stub.fetch(request);
     }
 
+    // WebSocket endpoint for real-time insights - forward to Durable Object
+    if (
+      path === "/api/insights/ws" &&
+      request.headers.get("Upgrade") === "websocket"
+    ) {
+      const meetingId = url.searchParams.get("meetingId");
+      if (!meetingId) {
+        return errorResponse("Missing meetingId", 400);
+      }
+
+      // Forward the WebSocket upgrade request to the Durable Object
+      // The DO will handle the WebSocket upgrade internally
+      const agentId = env.INTERVIEW_AGENT.idFromName(meetingId);
+      const stub = env.INTERVIEW_AGENT.get(agentId);
+
+      // Create a new request with the insights path for the DO to handle
+      const insightsUrl = new URL(request.url);
+      insightsUrl.pathname = "/insights/ws";
+      const insightsRequest = new Request(insightsUrl.toString(), request);
+
+      return stub.fetch(insightsRequest);
+    }
+
     if (path.startsWith("/api/")) {
       try {
         if (path === "/api/session" && request.method === "POST") {

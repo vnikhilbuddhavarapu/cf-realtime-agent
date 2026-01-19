@@ -8,6 +8,7 @@ import {
 import type { Env, ScenarioConfig, PersonaConfig } from "../types";
 import { Logger } from "../utils/logger";
 import { getInterviewContext } from "../rag";
+import { InsightGenerator } from "../insights";
 
 class InterviewTextProcessor extends TextComponent {
   private env: Env;
@@ -16,12 +17,14 @@ class InterviewTextProcessor extends TextComponent {
   private persona: PersonaConfig;
   private roleplayId: string;
   private conversationHistory: { role: string; content: string }[] = [];
+  private insightGenerator: InsightGenerator;
 
   constructor(
     env: Env,
     scenario: ScenarioConfig,
     persona: PersonaConfig,
     roleplayId: string,
+    insightGenerator: InsightGenerator,
   ) {
     super();
     this.env = env;
@@ -29,6 +32,7 @@ class InterviewTextProcessor extends TextComponent {
     this.scenario = scenario;
     this.persona = persona;
     this.roleplayId = roleplayId;
+    this.insightGenerator = insightGenerator;
   }
 
   private buildSystemPrompt(ragContext: string): string {
@@ -105,6 +109,12 @@ Remember: You are ${persona.interviewerName}. Be natural and conversational.`;
     });
 
     try {
+      // Send user transcript to InsightGenerator for analysis (non-blocking)
+      this.insightGenerator.processUserUtterance(text).catch((err) => {
+        this.logger.warn("InsightGenerator failed to process user utterance", {
+          error: String(err),
+        });
+      });
       // Get RAG context for this question/response (optional - don't block on errors)
       let ragContext: {
         resumeContext: unknown[];
@@ -182,6 +192,18 @@ Remember: You are ${persona.interviewerName}. Be natural and conversational.`;
         content: responseText,
       });
 
+      // Send interviewer response to InsightGenerator (non-blocking)
+      this.insightGenerator
+        .processInterviewerUtterance(responseText)
+        .catch((err) => {
+          this.logger.warn(
+            "InsightGenerator failed to process interviewer utterance",
+            {
+              error: String(err),
+            },
+          );
+        });
+
       this.logger.info("Generated AI response with full persona config", {
         response: responseText.substring(0, 100),
         historyLength: this.conversationHistory.length,
@@ -202,10 +224,56 @@ Remember: You are ${persona.interviewerName}. Be natural and conversational.`;
 
 export class InterviewAgent extends RealtimeAgent<Env> {
   private logger: Logger;
+  private insightGenerator?: InsightGenerator;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.logger = new Logger("InterviewAgent");
+  }
+
+  // Override fetch to handle insights WebSocket before passing to parent
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    // Handle insights WebSocket upgrade
+    if (
+      url.pathname === "/insights/ws" &&
+      request.headers.get("Upgrade") === "websocket"
+    ) {
+      this.logger.info("Handling insights WebSocket upgrade");
+
+      // Create WebSocket pair
+      const { 0: client, 1: server } = new WebSocketPair();
+
+      // Accept the server side
+      server.accept();
+
+      // Add to insight generator if available
+      if (this.insightGenerator) {
+        this.insightGenerator.addWebSocket(server);
+        server.addEventListener("close", () => {
+          this.insightGenerator?.removeWebSocket(server);
+        });
+        this.logger.info("Insights WebSocket connected to InsightGenerator");
+      } else {
+        this.logger.warn(
+          "InsightGenerator not initialized, WebSocket will receive no data",
+        );
+        // Don't close - the generator might be initialized later
+      }
+
+      return new Response(null, {
+        status: 101,
+        webSocket: client,
+      });
+    }
+
+    // Pass all other requests to parent (RealtimeAgent)
+    return super.fetch(request);
+  }
+
+  getInsightGenerator(): InsightGenerator | undefined {
+    return this.insightGenerator;
   }
 
   async init(
@@ -237,11 +305,20 @@ export class InterviewAgent extends RealtimeAgent<Env> {
         roleplayId,
       });
 
+      // Create InsightGenerator for real-time coaching
+      this.insightGenerator = new InsightGenerator(this.env, {
+        roleplayId,
+        persona,
+        scenario,
+      });
+      this.logger.info("InsightGenerator created", { roleplayId });
+
       const textProcessor = new InterviewTextProcessor(
         this.env,
         scenario,
         persona,
         roleplayId,
+        this.insightGenerator,
       );
       // Use default filters as per docs - don't restrict media kinds
       const rtkTransport = new RealtimeKitTransport(meetingId, authToken);
@@ -340,10 +417,13 @@ export class InterviewAgent extends RealtimeAgent<Env> {
       // Register event handlers BEFORE joining (exactly as per docs)
       meeting.participants.joined.on("participantJoined", (participant) => {
         this.logger.info("Participant joined", { name: participant.name });
-        // Simple speak call as per docs pattern - use persona/scenario properties
-        textProcessor.speak(
-          `Hello ${persona.candidateName}! I'm ${persona.interviewerName}, ${persona.interviewerTitle} at ${persona.companyName}. Thanks for joining this ${scenario.name}. Let's begin when you're ready.`,
-        );
+        // Add a small delay to ensure pipeline is fully ready for audio production
+        setTimeout(() => {
+          this.logger.info("Speaking greeting after delay");
+          textProcessor.speak(
+            `Hello ${persona.candidateName}! I'm ${persona.interviewerName}, ${persona.interviewerTitle} at ${persona.companyName}. Thanks for joining this ${scenario.name}. Let's begin when you're ready.`,
+          );
+        }, 2000); // 2 second delay to ensure pipeline is ready
       });
 
       meeting.participants.joined.on("participantLeft", (participant) => {

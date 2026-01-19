@@ -1,0 +1,1 @@
+export { InsightGenerator } from "./generator";
