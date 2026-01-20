@@ -72,3 +72,15 @@ export async function endMeeting(roleplayId: string) {
   if (!response.ok) throw new Error("Failed to end meeting");
   return response.json();
 }
+
+export async function generateReport(
+  roleplayId: string,
+): Promise<ApiResponse<import("./types").InterviewReport>> {
+  const response = await fetch(`${API_BASE}/api/report/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roleplayId }),
+  });
+  if (!response.ok) throw new Error("Failed to generate report");
+  return response.json();
+}

@@ -5,10 +5,16 @@ import {
   ElevenLabsTTS,
   RealtimeAgent,
 } from "@cloudflare/realtime-agents";
-import type { Env, ScenarioConfig, PersonaConfig } from "../types";
+import type {
+  Env,
+  ScenarioConfig,
+  PersonaConfig,
+  InterviewReport,
+} from "../types";
 import { Logger } from "../utils/logger";
 import { getInterviewContext } from "../rag";
 import { InsightGenerator } from "../insights";
+import { ReportGenerator } from "../report";
 
 class InterviewTextProcessor extends TextComponent {
   private env: Env;
@@ -225,6 +231,10 @@ Remember: You are ${persona.interviewerName}. Be natural and conversational.`;
 export class InterviewAgent extends RealtimeAgent<Env> {
   private logger: Logger;
   private insightGenerator?: InsightGenerator;
+  private scenario?: ScenarioConfig;
+  private persona?: PersonaConfig;
+  private roleplayId?: string;
+  private startTime?: number;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -304,6 +314,12 @@ export class InterviewAgent extends RealtimeAgent<Env> {
         interviewerName: persona.interviewerName,
         roleplayId,
       });
+
+      // Store for report generation
+      this.scenario = scenario;
+      this.persona = persona;
+      this.roleplayId = roleplayId;
+      this.startTime = Date.now();
 
       // Create InsightGenerator for real-time coaching
       this.insightGenerator = new InsightGenerator(this.env, {
@@ -448,5 +464,43 @@ export class InterviewAgent extends RealtimeAgent<Env> {
       this.logger.error("Failed to deinitialize agent", error);
       throw error;
     }
+  }
+
+  async generateReport(): Promise<InterviewReport> {
+    this.logger.info("Generating interview report", {
+      roleplayId: this.roleplayId,
+    });
+
+    if (
+      !this.scenario ||
+      !this.persona ||
+      !this.roleplayId ||
+      !this.startTime
+    ) {
+      throw new Error(
+        "Interview not properly initialized - cannot generate report",
+      );
+    }
+
+    const transcript = this.insightGenerator?.getTranscript() || [];
+
+    const reportGenerator = new ReportGenerator(this.env, {
+      roleplayId: this.roleplayId,
+      scenario: this.scenario,
+      persona: this.persona,
+      transcript,
+      startTime: this.startTime,
+      endTime: Date.now(),
+    });
+
+    const report = await reportGenerator.generateReport();
+
+    this.logger.info("Report generated", {
+      roleplayId: this.roleplayId,
+      overallScore: report.overallScore,
+      transcriptLength: transcript.length,
+    });
+
+    return report;
   }
 }

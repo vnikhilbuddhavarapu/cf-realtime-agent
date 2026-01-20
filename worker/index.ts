@@ -9,6 +9,7 @@ import {
   handleCreateRoleplay,
   handleStartMeeting,
   handleEndMeeting,
+  handleGenerateReport,
 } from "./routes/api";
 import {
   handleUploadResume,
@@ -142,6 +143,17 @@ export default {
           }
 
           return await handleEndMeeting(env, roleplayId);
+        }
+
+        if (path === "/api/report/generate" && request.method === "POST") {
+          const body = (await request.json()) as { roleplayId: string };
+          const { roleplayId } = body;
+
+          if (!roleplayId) {
+            return errorResponse("Missing roleplayId", 400);
+          }
+
+          return await handleGenerateReport(env, roleplayId);
         }
 
         // RAG Routes

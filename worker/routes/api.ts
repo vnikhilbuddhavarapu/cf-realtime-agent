@@ -6,6 +6,7 @@ import type {
   StartMeetingResponse,
   ScenarioConfig,
   PersonaConfig,
+  InterviewReport,
 } from "../types";
 import { Logger } from "../utils/logger";
 import { jsonResponse, errorResponse } from "../utils/response";
@@ -275,5 +276,56 @@ export async function handleEndMeeting(
   } catch (error) {
     logger.error("Failed to end meeting", error);
     return errorResponse("Failed to end meeting");
+  }
+}
+
+export async function handleGenerateReport(
+  env: Env,
+  roleplayId: string,
+): Promise<Response> {
+  const logger = new Logger("APIRoutes");
+
+  try {
+    // Get the roleplay data to find the meetingId
+    const sessionManagerId = env.SESSION_MANAGER.idFromName(SESSION_MANAGER_ID);
+    const stub = env.SESSION_MANAGER.get(sessionManagerId);
+
+    const roleplayResponse = await stub.fetch(
+      `http://internal/roleplay?roleplayId=${roleplayId}`,
+    );
+    const roleplayResult =
+      (await roleplayResponse.json()) as ApiResponse<RoleplayData>;
+
+    if (!roleplayResult.success || !roleplayResult.data?.meetingId) {
+      return errorResponse("Roleplay not found or meeting not started", 404);
+    }
+
+    // Get the agent and generate report
+    const agentId = env.INTERVIEW_AGENT.idFromName(
+      roleplayResult.data.meetingId,
+    );
+    const agentStub = env.INTERVIEW_AGENT.get(agentId) as DurableObjectStub & {
+      generateReport: () => Promise<InterviewReport>;
+    };
+
+    logger.info("Generating report", {
+      roleplayId,
+      meetingId: roleplayResult.data.meetingId,
+    });
+
+    const report = await agentStub.generateReport();
+
+    logger.info("Report generated successfully", {
+      roleplayId,
+      overallScore: report.overallScore,
+    });
+
+    return jsonResponse<InterviewReport>(report);
+  } catch (error) {
+    logger.error("Failed to generate report", error);
+    return errorResponse(
+      error instanceof Error ? error.message : "Failed to generate report",
+      500,
+    );
   }
 }

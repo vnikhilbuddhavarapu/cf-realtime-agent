@@ -4,16 +4,19 @@ import { ScenarioSelector } from './components/scenario/ScenarioSelector';
 import { PersonaCustomizer } from './components/persona/PersonaCustomizer';
 import { DocumentUpload } from './components/preparation/DocumentUpload';
 import { MeetingRoom } from './components/meeting/MeetingRoom';
+import { InterviewReport } from './components/report/InterviewReport';
+import { ReportLoading } from './components/report/ReportLoading';
 import { useSession } from './hooks/useSession';
-import { createSession, createRoleplay } from './lib/api';
-import type { ScenarioPreset, ScenarioConfig, PersonaConfig } from './lib/types';
+import { createSession, createRoleplay, generateReport } from './lib/api';
+import type { ScenarioPreset, ScenarioConfig, PersonaConfig, InterviewReport as ReportType } from './lib/types';
 
-type AppStep = 'landing' | 'scenario' | 'persona' | 'preparation' | 'meeting';
+type AppStep = 'landing' | 'scenario' | 'persona' | 'preparation' | 'meeting' | 'generating_report' | 'report';
 
 function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>('landing');
   const [selectedPreset, setSelectedPreset] = useState<ScenarioPreset | null>(null);
   const [isCreatingRoleplay, setIsCreatingRoleplay] = useState(false);
+  const [report, setReport] = useState<ReportType | null>(null);
   const sessionHook = useSession();
   const { session, setScenario, setPersona, setRoleplayId, setSessionId, reset } = sessionHook;
 
@@ -69,9 +72,31 @@ function App() {
     if (currentStep === 'preparation') setCurrentStep('persona');
   };
 
-  const handleEndMeeting = () => {
+  const handleEndMeeting = async (roleplayId: string) => {
+    // Start report generation
+    setCurrentStep('generating_report');
+    
+    try {
+      const reportResponse = await generateReport(roleplayId);
+      if (reportResponse.success && reportResponse.data) {
+        setReport(reportResponse.data);
+        setCurrentStep('report');
+      } else {
+        console.error('Failed to generate report');
+        // Fallback to landing if report fails
+        handleStartNewSession();
+      }
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      // Fallback to landing if report fails
+      handleStartNewSession();
+    }
+  };
+
+  const handleStartNewSession = () => {
     reset();
     setSelectedPreset(null);
+    setReport(null);
     setCurrentStep('landing');
   };
 
@@ -108,6 +133,12 @@ function App() {
       )}
       {currentStep === 'meeting' && (
         <MeetingRoom session={session} onEnd={handleEndMeeting} />
+      )}
+      {currentStep === 'generating_report' && (
+        <ReportLoading />
+      )}
+      {currentStep === 'report' && report && (
+        <InterviewReport report={report} onStartNewSession={handleStartNewSession} />
       )}
     </div>
   );

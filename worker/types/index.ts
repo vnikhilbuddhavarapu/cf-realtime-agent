@@ -174,3 +174,45 @@ export type InsightsWSMessage =
   | { type: "question_type"; data: QuestionType }
   | { type: "connected"; roleplayId: string }
   | { type: "error"; message: string };
+
+// === REPORT TYPES ===
+export interface CategoryScore {
+  category: string;
+  score: number; // 1-10
+  feedback: string;
+}
+
+export interface InterviewReport {
+  id: string;
+  roleplayId: string;
+  generatedAt: number;
+
+  // Interview metadata
+  scenario: ScenarioConfig;
+  persona: PersonaConfig;
+  duration: number; // in seconds
+
+  // Scores
+  overallScore: number; // 1-10
+  categoryScores: CategoryScore[];
+
+  // Feedback
+  strengths: string[];
+  areasForImprovement: string[];
+  actionableTips: string[];
+
+  // STAR analysis (for behavioral interviews)
+  starAnalysis?: {
+    situationScore: number;
+    taskScore: number;
+    actionScore: number;
+    resultScore: number;
+    feedback: string;
+  };
+
+  // Full transcript
+  transcript: TranscriptEntry[];
+
+  // Summary
+  summary: string;
+}

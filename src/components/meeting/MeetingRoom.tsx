@@ -23,7 +23,7 @@ const RtkNotifications = (RtkUI as unknown as Record<string, any>).RtkNotificati
 
 interface MeetingRoomProps {
   session: SessionState;
-  onEnd: () => void;
+  onEnd: (roleplayId: string) => void;
 }
 
 export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
@@ -60,14 +60,15 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
   }, [meeting]);
 
   const handleEndMeeting = async () => {
-    if (roleplayId) {
+    const currentRoleplayId = roleplayId || session.roleplayId;
+    if (currentRoleplayId) {
       try {
-        await endMeeting(roleplayId);
+        await endMeeting(currentRoleplayId);
       } catch (err) {
         console.error('Failed to end meeting:', err);
       }
+      onEnd(currentRoleplayId);
     }
-    onEnd();
   };
 
   const initializeMeeting = async () => {
@@ -163,7 +164,12 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
             <p className="text-[#9CA3AF] mt-2">{error}</p>
           </div>
           <button
-            onClick={onEnd}
+            onClick={() => {
+              const currentRoleplayId = roleplayId || session.roleplayId;
+              if (currentRoleplayId) {
+                onEnd(currentRoleplayId);
+              }
+            }}
             className="px-6 py-3 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg font-medium transition-colors"
           >
             Go Back
