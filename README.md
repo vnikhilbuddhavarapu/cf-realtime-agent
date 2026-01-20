@@ -89,6 +89,29 @@
    API -->|RAG index/upload| V
  ```
 
+ ## STT-LLM-TTS Pipeline
+
+ ```
+ sequenceDiagram
+  participant User as User (mic)
+  participant SFU as RealtimeKit SFU
+  participant Agent as InterviewAgent (DO)
+  participant STT as Deepgram STT
+  participant LLM as Workers AI
+  participant TTS as ElevenLabs TTS
+
+  User->>SFU: WebRTC audio (mic frames)
+  SFU->>Agent: Incoming audio frames
+  Agent->>STT: Stream audio / request transcript
+  STT-->>Agent: Final transcript text
+  Agent->>LLM: Prompt (persona + scenario + timeboxing + optional RAG)
+  LLM-->>Agent: Response text
+  Agent->>TTS: Synthesize speech
+  TTS-->>Agent: Audio bytes/stream
+  Agent->>SFU: Publish audio into meeting
+  SFU-->>User: WebRTC audio (agent voice)
+ ```
+
  ## Setup
 
  - Copy `.dev.vars.example` to `.dev.vars` (for local dev)
