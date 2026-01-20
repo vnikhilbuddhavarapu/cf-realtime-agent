@@ -63,7 +63,6 @@
  - Run locally: `npm run dev`
  - Deploy: `npm run deploy`
 
- See `SETUP.md` for the step-by-step Cloudflare RealtimeKit app setup.
 
  ## Environment variables
 
