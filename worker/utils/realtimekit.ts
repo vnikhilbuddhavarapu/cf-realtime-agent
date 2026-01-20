@@ -81,15 +81,15 @@ export async function createRealtimeKitMeeting(
 
   const participantBody: {
     name: string;
-    presetName?: string;
-    customParticipantId?: string;
+    preset_name?: string;
+    custom_participant_id?: string;
   } = {
     name: "AI Interview Agent",
-    customParticipantId: `agent-${meetingId}`,
+    custom_participant_id: `agent-${meetingId}`,
   };
 
   if (presetName) {
-    participantBody.presetName = presetName;
+    participantBody.preset_name = presetName;
   }
 
   const participantResponse = await fetch(addParticipantUrl, {

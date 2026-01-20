@@ -29,11 +29,28 @@ interface MeetingData {
   roleplayId: string;
 }
 
+interface MeetingReadyData {
+  ready: boolean;
+  initInProgress: boolean;
+  hasPipeline: boolean;
+  meetingJoined: boolean;
+}
+
 export async function createSession(): Promise<ApiResponse<SessionData>> {
   const response = await fetch(`${API_BASE}/api/session`, {
     method: "POST",
   });
   if (!response.ok) throw new Error("Failed to create session");
+  return response.json();
+}
+
+export async function getMeetingReady(
+  meetingId: string,
+): Promise<ApiResponse<MeetingReadyData>> {
+  const response = await fetch(
+    `${API_BASE}/api/meeting/ready?meetingId=${encodeURIComponent(meetingId)}`,
+  );
+  if (!response.ok) throw new Error("Failed to get meeting readiness");
   return response.json();
 }
 

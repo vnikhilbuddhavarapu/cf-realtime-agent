@@ -152,6 +152,15 @@ export interface CategoryScore {
   feedback: string;
 }
 
+export type ReportConfidence = "low" | "medium" | "high";
+
+export interface ReportEvidence {
+  candidateTurns: number;
+  candidateWordCount: number;
+  interviewerTurns: number;
+  interviewerWordCount: number;
+}
+
 export interface InterviewReport {
   id: string;
   roleplayId: string;
@@ -165,6 +174,11 @@ export interface InterviewReport {
   // Scores
   overallScore: number; // 1-10
   categoryScores: CategoryScore[];
+
+  // Confidence & evidence (helps keep short interviews from being over-scored)
+  confidence: ReportConfidence;
+  confidenceReason: string;
+  evidence: ReportEvidence;
 
   // Feedback
   strengths: string[];

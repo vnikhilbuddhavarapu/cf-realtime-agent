@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useRealtimeKitClient } from '@cloudflare/realtimekit-react';
 import * as RtkUI from '@cloudflare/realtimekit-react-ui';
-import { createSession, createRoleplay, startMeeting, endMeeting } from '../../lib/api';
+import { createSession, createRoleplay, startMeeting, endMeeting, getMeetingReady } from '../../lib/api';
 import type { SessionState } from '../../lib/types';
 import { InsightsHUD } from './InsightsHUD';
+import { Button } from "../ui/Button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card";
 
 // RTK UI Kit components - types not fully exported but components exist at runtime
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,8 +35,14 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
   const [error, setError] = useState<string | null>(null);
   const [roleplayId, setRoleplayId] = useState<string | null>(null);
   const [meetingId, setMeetingId] = useState<string | null>(null);
+  const [meetingAuthToken, setMeetingAuthToken] = useState<string | null>(null);
+  const [meetingStartMs, setMeetingStartMs] = useState<number | null>(null);
+  const [timeRemainingSeconds, setTimeRemainingSeconds] = useState<number | null>(null);
   const [meeting, initMeeting] = useRealtimeKitClient();
   const initStarted = useRef(false);
+  const endStartedRef = useRef(false);
+  const autoLeaveScheduledRef = useRef(false);
+  const autoLeaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initStarted.current) return;
@@ -59,7 +68,24 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meeting]);
 
+  useEffect(() => {
+    return () => {
+      if (autoLeaveTimeoutRef.current) {
+        clearTimeout(autoLeaveTimeoutRef.current);
+        autoLeaveTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const handleEndMeeting = async () => {
+    if (endStartedRef.current) return;
+    endStartedRef.current = true;
+
+    if (autoLeaveTimeoutRef.current) {
+      clearTimeout(autoLeaveTimeoutRef.current);
+      autoLeaveTimeoutRef.current = null;
+    }
+
     const currentRoleplayId = roleplayId || session.roleplayId;
     if (currentRoleplayId) {
       try {
@@ -71,10 +97,59 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
     }
   };
 
+  useEffect(() => {
+    if (!meetingStartMs) return;
+
+    const durationMinutes = session.scenario?.duration || 15;
+    const totalSeconds = durationMinutes * 60;
+
+    const tick = () => {
+      const elapsedSeconds = Math.floor((Date.now() - meetingStartMs) / 1000);
+      setTimeRemainingSeconds(Math.max(0, totalSeconds - elapsedSeconds));
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [meetingStartMs, session.scenario?.duration]);
+
+  useEffect(() => {
+    if (!meeting) return;
+    if (typeof timeRemainingSeconds !== "number") return;
+    if (timeRemainingSeconds > 0) return;
+    if (autoLeaveScheduledRef.current) return;
+
+    autoLeaveScheduledRef.current = true;
+    autoLeaveTimeoutRef.current = setTimeout(() => {
+      meeting.leave().catch((err) => {
+        console.error('Failed to auto-leave meeting:', err);
+      });
+    }, 30_000);
+  }, [meeting, timeRemainingSeconds]);
+
   const initializeMeeting = async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+      const waitForAgentReady = async (meetingId: string) => {
+        const start = Date.now();
+        const timeoutMs = 30000;
+        while (Date.now() - start < timeoutMs) {
+          try {
+            const readyResponse = await getMeetingReady(meetingId);
+            if (readyResponse.success && readyResponse.data?.ready) {
+              return true;
+            }
+          } catch (err) {
+            console.warn('Failed to check agent readiness, will retry:', err);
+          }
+          await sleep(250);
+        }
+        return false;
+      };
 
       // Use existing roleplayId if available (from preparation step), otherwise create new
       let currentRoleplayId = session.roleplayId;
@@ -102,21 +177,36 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
       
       setRoleplayId(currentRoleplayId);
 
-      // Start meeting and get auth token
-      setLoadingMessage(`Connecting to ${session.persona?.interviewerName || 'your interviewer'}...`);
-      const meetingResponse = await startMeeting(currentRoleplayId);
-      
-      if (!meetingResponse.success || !meetingResponse.data) {
-        throw new Error(meetingResponse.error || 'Failed to start meeting');
+      let currentMeetingId = meetingId;
+      let currentMeetingAuthToken = meetingAuthToken;
+
+      if (!currentMeetingId || !currentMeetingAuthToken) {
+        // Start meeting and get auth token
+        setLoadingMessage(`Connecting to ${session.persona?.interviewerName || 'your interviewer'}...`);
+        const meetingResponse = await startMeeting(currentRoleplayId);
+        
+        if (!meetingResponse.success || !meetingResponse.data) {
+          throw new Error(meetingResponse.error || 'Failed to start meeting');
+        }
+
+        currentMeetingId = meetingResponse.data.meetingId;
+        currentMeetingAuthToken = meetingResponse.data.authToken;
+
+        // Store meetingId/auth token for InsightsHUD WS connection and retry attempts
+        setMeetingId(currentMeetingId);
+        setMeetingAuthToken(currentMeetingAuthToken);
       }
 
-      // Store meetingId for InsightsHUD WebSocket connection
-      setMeetingId(meetingResponse.data.meetingId);
+      setLoadingMessage('Waiting for interviewer to get ready...');
+      const isAgentReady = await waitForAgentReady(currentMeetingId);
+      if (!isAgentReady) {
+        throw new Error('Interviewer is still getting ready. Please retry in a few seconds.');
+      }
 
       // Initialize RealtimeKit client with the auth token
       setLoadingMessage('Joining the interview room...');
       const meetingClient = await initMeeting({
-        authToken: meetingResponse.data.authToken,
+        authToken: currentMeetingAuthToken,
         defaults: {
           audio: true,
           video: false, // Audio-only for interview
@@ -127,6 +217,7 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
       if (meetingClient) {
         await meetingClient.join();
         console.log('Successfully joined meeting room');
+        setMeetingStartMs(Date.now());
       }
 
       setIsLoading(false);
@@ -138,43 +229,55 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0F0F0F] text-[#F5F5F5] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-[#3B82F6] border-t-transparent rounded-full animate-spin mx-auto" />
-          <div>
-            <h2 className="text-2xl font-bold">Preparing Your Interview</h2>
-            <p className="text-[#9CA3AF] mt-2">{loadingMessage}</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center px-6">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Preparing your interview</CardTitle>
+            <CardDescription>{loadingMessage}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-14 w-14 rounded-2xl border border-zinc-800 bg-zinc-950 flex items-center justify-center">
+              <Loader2 className="h-5 w-5 animate-spin text-zinc-200" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0F0F0F] text-[#F5F5F5] flex items-center justify-center">
-        <div className="text-center space-y-4 max-w-md">
-          <div className="w-16 h-16 bg-[#EF4444]/10 rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-8 h-8 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">Failed to Start Interview</h2>
-            <p className="text-[#9CA3AF] mt-2">{error}</p>
-          </div>
-          <button
-            onClick={() => {
-              const currentRoleplayId = roleplayId || session.roleplayId;
-              if (currentRoleplayId) {
-                onEnd(currentRoleplayId);
-              }
-            }}
-            className="px-6 py-3 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg font-medium transition-colors"
-          >
-            Go Back
-          </button>
-        </div>
+      <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center px-6">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-300" />
+              Failed to start interview
+            </CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-end gap-2">
+            <Button
+              onClick={() => {
+                initializeMeeting();
+              }}
+              variant="secondary"
+            >
+              Retry
+            </Button>
+            <Button
+              onClick={() => {
+                const currentRoleplayId = roleplayId || session.roleplayId;
+                if (currentRoleplayId) {
+                  onEnd(currentRoleplayId);
+                }
+              }}
+              variant="secondary"
+            >
+              Go back
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -182,54 +285,46 @@ export function MeetingRoom({ session, onEnd }: MeetingRoomProps) {
   // Render the embedded RealtimeKit meeting UI with Insights sidebar
   if (meeting) {
     return (
-      <div className="min-h-screen bg-[#0F0F0F] flex flex-col">
-        {/* Header with end button */}
-        <div className="bg-[#1A1A1A] border-b border-[#2A2A2A] px-6 py-4 flex items-center justify-between">
+      <div className="min-h-screen bg-zinc-950 flex flex-col">
+        <div className="bg-zinc-950/70 border-b border-zinc-800 px-6 py-4 flex items-center justify-between backdrop-blur-sm">
           <div>
-            <h1 className="text-[#F5F5F5] text-xl font-bold">
-              {session.scenario?.name || 'Interview'} Session
+            <h1 className="text-zinc-50 text-xl font-semibold tracking-tight">
+              {session.scenario?.name || 'Interview'} session
             </h1>
-            <p className="text-[#9CA3AF] text-sm">
-              with {session.persona?.interviewerName || 'AI Interviewer'} • {session.persona?.interviewerTitle || 'Interviewer'}
+            <p className="text-zinc-400 text-sm">
+              with {session.persona?.interviewerName || 'AI interviewer'} • {session.persona?.interviewerTitle || 'Interviewer'}
             </p>
           </div>
-          <button
-            onClick={handleEndMeeting}
-            className="px-4 py-2 bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-lg font-medium transition-colors"
-          >
-            End Interview
-          </button>
         </div>
         
         {/* Main content: Custom Meeting UI with Insights Sidebar */}
-        <div className="flex-1 flex" style={{ height: 'calc(100vh - 80px)' }}>
-          {/* Custom Meeting UI - wrapped in RtkUiProvider for context */}
-          <RtkUiProvider
-            meeting={meeting}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              flex: 1,
-            }}
-          >
-            {/* Participant Grid */}
-            <RtkStage style={{ flex: 1 }}>
-              <RtkGrid />
-            </RtkStage>
-            
-            {/* Control Bar */}
-            <RtkControlbar style={{ display: 'flex', justifyContent: 'center' }} />
-            
-            {/* Required hidden components for audio and dialogs */}
-            <RtkParticipantsAudio />
-            <RtkDialogManager />
-            <RtkNotifications />
-          </RtkUiProvider>
+        <div className="flex-1 flex min-h-0" style={{ height: 'calc(100vh - 80px)' }}>
+          <div className="flex-1 p-4 min-h-0">
+            <div className="rtk-theme h-full rounded-2xl border border-zinc-800 bg-zinc-900/30 overflow-hidden">
+              <RtkUiProvider
+                meeting={meeting}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                }}
+              >
+                <RtkStage style={{ flex: 1 }}>
+                  <RtkGrid />
+                </RtkStage>
+                <RtkControlbar style={{ display: 'flex', justifyContent: 'center' }} />
+                <RtkParticipantsAudio />
+                <RtkDialogManager />
+                <RtkNotifications />
+              </RtkUiProvider>
+            </div>
+          </div>
           
           {/* Insights HUD Sidebar */}
           <InsightsHUD
             meetingId={meetingId}
             duration={session.scenario?.duration || 15}
+            timeRemainingSeconds={typeof timeRemainingSeconds === "number" ? timeRemainingSeconds : undefined}
             interviewerName={session.persona?.interviewerName || 'Interviewer'}
             candidateName={session.persona?.candidateName || 'Candidate'}
           />

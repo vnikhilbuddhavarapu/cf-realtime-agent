@@ -24,6 +24,7 @@ export interface ChunkMetadata {
   source: DocumentSource;
   chunkType: ChunkType;
   chunkIndex: number;
+  textSnippet?: string;
   // Optional contextual metadata
   company?: string;
   role?: string;

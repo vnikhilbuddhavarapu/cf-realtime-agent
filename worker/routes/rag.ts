@@ -74,7 +74,14 @@ export async function handleUploadResume(
       chunksIndexed: result.chunksIndexed,
     });
 
-    return jsonResponse(result);
+    if (!result.success) {
+      return errorResponse(result.error || "Resume indexing failed", 500);
+    }
+
+    return jsonResponse({
+      documentId: result.documentId,
+      chunksIndexed: result.chunksIndexed,
+    });
   } catch (error) {
     logger.error("Resume upload failed", error);
     return errorResponse(
@@ -143,7 +150,17 @@ export async function handleUploadJobDescription(
       chunksIndexed: result.chunksIndexed,
     });
 
-    return jsonResponse(result);
+    if (!result.success) {
+      return errorResponse(
+        result.error || "Job description indexing failed",
+        500,
+      );
+    }
+
+    return jsonResponse({
+      documentId: result.documentId,
+      chunksIndexed: result.chunksIndexed,
+    });
   } catch (error) {
     logger.error("Job description upload failed", error);
     return errorResponse(

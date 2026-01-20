@@ -1,5 +1,16 @@
 import type { ScenarioPreset } from '../../lib/types';
 import { getScenarioList } from '../../lib/scenarios';
+import {
+  Briefcase,
+  ChevronLeft,
+  Cpu,
+  Phone,
+  Target,
+  Trophy,
+} from "lucide-react";
+import { Button } from "../ui/Button";
+import { Card, CardContent, CardDescription, CardTitle } from "../ui/Card";
+import { Badge } from "../ui/Badge";
 
 interface ScenarioSelectorProps {
   onSelect: (scenario: ScenarioPreset) => void;
@@ -9,23 +20,35 @@ interface ScenarioSelectorProps {
 const scenarios = getScenarioList();
 
 export function ScenarioSelector({ onSelect, onBack }: ScenarioSelectorProps) {
+  const getScenarioIcon = (scenarioId: ScenarioPreset["id"]) => {
+    switch (scenarioId) {
+      case "phone_screen":
+        return Phone;
+      case "behavioral":
+        return Target;
+      case "technical":
+        return Cpu;
+      case "hiring_manager":
+        return Briefcase;
+      case "final_round":
+        return Trophy;
+      default:
+        return Target;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-[#0F0F0F] via-[#1a1a1a] to-[#2A2A2A] text-[#F5F5F5]">
+    <div className="min-h-screen bg-linear-to-br from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">
       {/* Header */}
-      <header className="border-b border-[#2A2A2A] bg-[#0F0F0F]/50 backdrop-blur-sm">
+      <header className="border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-[#9CA3AF] hover:text-[#F5F5F5] transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+          <Button onClick={onBack} variant="ghost" size="sm">
+            <ChevronLeft className="h-4 w-4" />
             Back
-          </button>
+          </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-linear-to-br from-[#3B82F6] to-[#2563EB] rounded-lg" />
-            <span className="text-xl font-bold">InterviewAI</span>
+            <img src="/icon.png" className="w-7 h-7 rounded-xl bg-black" />
+            <span className="text-xl font-semibold tracking-tight">InterviewAI</span>
           </div>
           <div className="w-20" />
         </div>
@@ -34,39 +57,53 @@ export function ScenarioSelector({ onSelect, onBack }: ScenarioSelectorProps) {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4">Choose Your Interview Type</h1>
-          <p className="text-xl text-[#9CA3AF]">
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-3">
+            Choose your interview
+          </h1>
+          <p className="text-base md:text-lg text-zinc-400">
             Select the type of interview you want to practice
           </p>
         </div>
 
         {/* Scenario Cards Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {scenarios.map((scenario) => (
-            <button
-              key={scenario.id}
-              onClick={() => onSelect(scenario)}
-              className="group bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6 text-left transition-all hover:border-[#3B82F6] hover:scale-105 hover:shadow-xl hover:shadow-[#3B82F6]/10"
-            >
-              <div className={`w-14 h-14 bg-linear-to-br ${scenario.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                <span className="text-3xl">{scenario.icon}</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{scenario.name}</h3>
-              <p className="text-[#9CA3AF] text-sm leading-relaxed mb-3">
-                {scenario.description}
-              </p>
-              <div className="flex items-center gap-3 text-xs">
-                <span className={`px-2 py-1 rounded-full ${
-                  scenario.defaultDifficulty === 'easy' ? 'bg-green-500/20 text-green-400' :
-                  scenario.defaultDifficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                  'bg-red-500/20 text-red-400'
-                }`}>
-                  {scenario.defaultDifficulty.charAt(0).toUpperCase() + scenario.defaultDifficulty.slice(1)}
-                </span>
-                <span className="text-[#6B7280]">{scenario.defaultDuration} min</span>
-              </div>
-            </button>
-          ))}
+          {scenarios.map((scenario) => {
+            const Icon = getScenarioIcon(scenario.id);
+            return (
+              <button
+                key={scenario.id}
+                onClick={() => onSelect(scenario)}
+                className="text-left"
+              >
+                <Card className="transition-colors hover:border-zinc-700">
+                  <CardContent className="space-y-4">
+                    <div className="h-11 w-11 rounded-xl border border-zinc-800 bg-zinc-950 flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-zinc-200" />
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg">{scenario.name}</CardTitle>
+                      <CardDescription>{scenario.description}</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={
+                          scenario.defaultDifficulty === "easy"
+                            ? "success"
+                            : scenario.defaultDifficulty === "medium"
+                              ? "warning"
+                              : "default"
+                        }
+                      >
+                        {scenario.defaultDifficulty.charAt(0).toUpperCase() +
+                          scenario.defaultDifficulty.slice(1)}
+                      </Badge>
+                      <Badge variant="subtle">{scenario.defaultDuration} min</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </button>
+            );
+          })}
         </div>
       </main>
     </div>

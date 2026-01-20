@@ -42,6 +42,8 @@ function createChunk(
   index: number,
   extraMetadata?: Partial<ChunkMetadata>,
 ): DocumentChunk {
+  const snippet = text.trim().slice(0, 500);
+
   return {
     id: generateChunkId(roleplayId, source, index),
     text: text.trim(),
@@ -50,6 +52,7 @@ function createChunk(
       source,
       chunkType,
       chunkIndex: index,
+      textSnippet: snippet,
       ...extraMetadata,
     },
   };

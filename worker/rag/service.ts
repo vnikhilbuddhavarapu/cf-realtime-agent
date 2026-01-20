@@ -313,12 +313,18 @@ export async function queryContext(
     });
 
     // Map to RAGResult format
-    return results.matches.map((match) => ({
-      id: match.id,
-      text: "", // We don't store text in vectors, need to reconstruct from chunks
-      score: match.score,
-      metadata: match.metadata as unknown as RAGResult["metadata"],
-    }));
+    return results.matches.map((match) => {
+      const metadata = match.metadata as unknown as RAGResult["metadata"];
+      const textSnippet =
+        typeof metadata?.textSnippet === "string" ? metadata.textSnippet : "";
+
+      return {
+        id: match.id,
+        text: textSnippet,
+        score: match.score,
+        metadata,
+      };
+    });
   } catch (error) {
     log("error", "RAG query failed", { roleplayId, error: String(error) });
     return [];
@@ -358,6 +364,7 @@ export async function getInterviewContext(
       if (r.metadata.company)
         combinedContext += `   Company: ${r.metadata.company}\n`;
       if (r.metadata.role) combinedContext += `   Role: ${r.metadata.role}\n`;
+      if (r.text) combinedContext += `   Snippet: ${r.text}\n`;
     });
     combinedContext += "\n";
   }
@@ -366,6 +373,7 @@ export async function getInterviewContext(
     combinedContext += "## Relevant Job Requirements\n";
     jdResults.forEach((r, i) => {
       combinedContext += `${i + 1}. [${r.metadata.chunkType}] Score: ${r.score.toFixed(3)}\n`;
+      if (r.text) combinedContext += `   Snippet: ${r.text}\n`;
     });
   }
 

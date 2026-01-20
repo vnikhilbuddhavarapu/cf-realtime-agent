@@ -10,6 +10,7 @@ import {
   handleStartMeeting,
   handleEndMeeting,
   handleGenerateReport,
+  handleMeetingReady,
 } from "./routes/api";
 import {
   handleUploadResume,
@@ -25,11 +26,7 @@ const logger = new Logger("Worker");
 export { InterviewAgent, SessionManager };
 
 export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    _ctx: ExecutionContext,
-  ): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -143,6 +140,14 @@ export default {
           }
 
           return await handleEndMeeting(env, roleplayId);
+        }
+
+        if (path === "/api/meeting/ready" && request.method === "GET") {
+          const meetingId = url.searchParams.get("meetingId");
+          if (!meetingId) {
+            return errorResponse("Missing meetingId parameter", 400);
+          }
+          return await handleMeetingReady(env, meetingId);
         }
 
         if (path === "/api/report/generate" && request.method === "POST") {

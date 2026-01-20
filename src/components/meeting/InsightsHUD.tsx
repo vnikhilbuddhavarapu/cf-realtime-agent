@@ -1,4 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import type { LucideIcon } from "lucide-react";
+import {
+  ChevronDown,
+  Clock,
+  Lightbulb,
+  Mic,
+  RefreshCcw,
+  Sparkles,
+  Target,
+  User,
+} from "lucide-react";
+import { Badge } from "../ui/Badge";
 import type {
   Insight,
   TranscriptEntry,
@@ -10,16 +22,50 @@ import type {
 interface InsightsHUDProps {
   meetingId: string | null;
   duration: number;
+  timeRemainingSeconds?: number;
   interviewerName: string;
   candidateName: string;
 }
 
-const INSIGHT_TYPE_CONFIG = {
-  framework: { icon: '🎯', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30' },
-  resume_highlight: { icon: '📄', color: 'text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30' },
-  question_guidance: { icon: '💡', color: 'text-yellow-400', bgColor: 'bg-yellow-500/10', borderColor: 'border-yellow-500/30' },
-  recovery: { icon: '🔄', color: 'text-orange-400', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30' },
-  positive: { icon: '✨', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
+const INSIGHT_TYPE_CONFIG: Record<
+  string,
+  {
+    Icon: LucideIcon;
+    itemClassName: string;
+    iconClassName: string;
+    textClassName: string;
+  }
+> = {
+  framework: {
+    Icon: Target,
+    itemClassName: "border-zinc-800 bg-zinc-950/40",
+    iconClassName: "text-zinc-200",
+    textClassName: "text-zinc-200",
+  },
+  resume_highlight: {
+    Icon: Sparkles,
+    itemClassName: "border-emerald-500/20 bg-emerald-500/10",
+    iconClassName: "text-emerald-200",
+    textClassName: "text-emerald-100",
+  },
+  question_guidance: {
+    Icon: Lightbulb,
+    itemClassName: "border-amber-500/20 bg-amber-500/10",
+    iconClassName: "text-amber-200",
+    textClassName: "text-amber-100",
+  },
+  recovery: {
+    Icon: RefreshCcw,
+    itemClassName: "border-orange-500/20 bg-orange-500/10",
+    iconClassName: "text-orange-200",
+    textClassName: "text-orange-100",
+  },
+  positive: {
+    Icon: Sparkles,
+    itemClassName: "border-zinc-700 bg-zinc-900/40",
+    iconClassName: "text-zinc-200",
+    textClassName: "text-zinc-200",
+  },
 };
 
 const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
@@ -31,7 +77,7 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   unknown: 'General',
 };
 
-export function InsightsHUD({ meetingId, duration, interviewerName, candidateName }: InsightsHUDProps) {
+export function InsightsHUD({ meetingId, duration, timeRemainingSeconds, interviewerName, candidateName }: InsightsHUDProps) {
   const [timeRemaining, setTimeRemaining] = useState(duration * 60);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
@@ -48,6 +94,9 @@ export function InsightsHUD({ meetingId, duration, interviewerName, candidateNam
   const wsRef = useRef<WebSocket | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const insightsEndRef = useRef<HTMLDivElement>(null);
+
+  const displayedTimeRemaining =
+    typeof timeRemainingSeconds === "number" ? timeRemainingSeconds : timeRemaining;
 
   // Connect to insights WebSocket
   useEffect(() => {
@@ -111,11 +160,12 @@ export function InsightsHUD({ meetingId, duration, interviewerName, candidateNam
 
   // Timer countdown
   useEffect(() => {
+    if (typeof timeRemainingSeconds === "number") return;
     const timer = setInterval(() => {
       setTimeRemaining(prev => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [timeRemainingSeconds]);
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -147,40 +197,45 @@ export function InsightsHUD({ meetingId, duration, interviewerName, candidateNam
   );
 
   return (
-    <div className="w-80 border-l border-[#2A2A2A] bg-[#0F0F0F] flex flex-col h-full">
+    <div className="w-80 shrink-0 border-l border-zinc-800 bg-zinc-950/60 backdrop-blur flex flex-col h-full">
       {/* Header */}
-      <div className="border-b border-[#2A2A2A] p-3">
+      <div className="border-b border-zinc-800 p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            💡 Live Coaching
+            <Sparkles className="h-4 w-4 text-zinc-200" />
+            Live coaching
             {wsConnected && (
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
             )}
           </h3>
-          <span className="text-lg font-bold text-[#3B82F6]">{formatTime(timeRemaining)}</span>
+          <span className="text-base font-semibold tabular-nums text-zinc-100 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-zinc-400" />
+            {formatTime(displayedTimeRemaining)}
+          </span>
         </div>
-        <div className="w-full bg-[#2A2A2A] rounded-full h-1">
+        <div className="w-full bg-zinc-800 rounded-full h-1">
           <div
-            className="bg-linear-to-r from-[#3B82F6] to-[#2563EB] h-1 rounded-full transition-all"
-            style={{ width: `${(timeRemaining / (duration * 60)) * 100}%` }}
+            className="bg-zinc-200 h-1 rounded-full transition-all"
+            style={{ width: `${(displayedTimeRemaining / (duration * 60)) * 100}%` }}
           />
         </div>
       </div>
 
       {/* Question Type Badge */}
       {questionType !== 'unknown' && (
-        <div className="px-3 pt-3">
-          <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#1a1a1a] border border-[#2A2A2A] rounded-full text-xs">
-            <span className="text-[#9CA3AF]">Question:</span>
-            <span className="font-medium text-[#3B82F6]">{QUESTION_TYPE_LABELS[questionType]}</span>
-          </div>
+        <div className="px-4 pt-4">
+          <Badge variant="subtle">
+            Question
+            <span className="text-zinc-500">:</span>
+            <span className="text-zinc-200">{QUESTION_TYPE_LABELS[questionType]}</span>
+          </Badge>
         </div>
       )}
 
       {/* STAR Progress (only for behavioral questions) */}
       {questionType === 'behavioral' && (
-        <div className="border-b border-[#2A2A2A] p-3">
-          <div className="text-xs text-[#9CA3AF] mb-2">STAR Framework Progress</div>
+        <div className="border-b border-zinc-800 p-4">
+          <div className="text-xs text-zinc-400 mb-2">STAR framework progress</div>
           <div className="flex gap-1">
             {starComponents.map((component, index) => {
               const isComplete = starProgress[component.key];
@@ -190,20 +245,20 @@ export function InsightsHUD({ meetingId, duration, interviewerName, candidateNam
                   key={component.key}
                   className={`flex-1 flex flex-col items-center p-2 rounded-lg transition-all ${
                     isComplete
-                      ? 'bg-green-500/20 border border-green-500/40'
+                      ? 'bg-emerald-500/10 border border-emerald-500/20'
                       : isCurrent
-                      ? 'bg-blue-500/20 border border-blue-500/40 animate-pulse'
-                      : 'bg-[#1a1a1a] border border-[#2A2A2A]'
+                      ? 'bg-zinc-50/10 border border-zinc-50/20 animate-pulse'
+                      : 'bg-zinc-950/40 border border-zinc-800'
                   }`}
                 >
                   <span
                     className={`text-lg font-bold ${
-                      isComplete ? 'text-green-400' : isCurrent ? 'text-blue-400' : 'text-[#6B7280]'
+                      isComplete ? 'text-emerald-200' : isCurrent ? 'text-zinc-100' : 'text-zinc-500'
                     }`}
                   >
                     {isComplete ? '✓' : component.label}
                   </span>
-                  <span className="text-[10px] text-[#9CA3AF] mt-0.5">{component.full}</span>
+                  <span className="text-[10px] text-zinc-400 mt-0.5">{component.full}</span>
                 </div>
               );
             })}
@@ -213,12 +268,12 @@ export function InsightsHUD({ meetingId, duration, interviewerName, candidateNam
 
       {/* Live Coaching Insights */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        <div className="px-3 pt-3 pb-1">
-          <h4 className="text-xs font-semibold text-[#9CA3AF]">Coaching Tips</h4>
+        <div className="px-4 pt-4 pb-2">
+          <h4 className="text-xs font-semibold text-zinc-400">Coaching tips</h4>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2">
+        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
           {insights.length === 0 ? (
-            <div className="text-xs text-[#6B7280] italic p-2">
+            <div className="text-xs text-zinc-500 italic p-2">
               Tips will appear as you speak...
             </div>
           ) : (
@@ -227,11 +282,11 @@ export function InsightsHUD({ meetingId, duration, interviewerName, candidateNam
               return (
                 <div
                   key={insight.id}
-                  className={`p-2 rounded-lg border ${config.bgColor} ${config.borderColor} animate-fade-in`}
+                  className={`p-3 rounded-xl border ${config.itemClassName} animate-fade-in`}
                 >
                   <div className="flex items-start gap-2">
-                    <span className="text-base">{config.icon}</span>
-                    <p className={`text-xs ${config.color} leading-relaxed`}>
+                    <config.Icon className={`h-4 w-4 mt-0.5 shrink-0 ${config.iconClassName}`} />
+                    <p className={`text-xs leading-relaxed ${config.textClassName}`}>
                       {insight.message}
                     </p>
                   </div>
@@ -244,49 +299,45 @@ export function InsightsHUD({ meetingId, duration, interviewerName, candidateNam
       </div>
 
       {/* Collapsible Transcript */}
-      <div className="border-t border-[#2A2A2A]">
+      <div className="border-t border-zinc-800">
         <button
           onClick={() => setIsTranscriptExpanded(!isTranscriptExpanded)}
-          className="w-full px-3 py-2 flex items-center justify-between text-xs text-[#9CA3AF] hover:bg-[#1a1a1a] transition-colors"
+          className="w-full px-4 py-3 flex items-center justify-between text-xs text-zinc-400 hover:bg-zinc-900/40 transition-colors"
         >
           <span className="flex items-center gap-2">
-            📝 Transcript
+            <Mic className="h-4 w-4" />
+            Transcript
             {transcript.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-[#2A2A2A] rounded text-[10px]">
+              <span className="px-1.5 py-0.5 bg-zinc-800 rounded text-[10px] text-zinc-200">
                 {transcript.length}
               </span>
             )}
           </span>
-          <svg
-            className={`w-4 h-4 transition-transform ${isTranscriptExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          </svg>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${isTranscriptExpanded ? 'rotate-180' : ''}`}
+          />
         </button>
 
         {isTranscriptExpanded && (
-          <div className="max-h-48 overflow-y-auto px-3 pb-3 space-y-2">
+          <div className="max-h-48 overflow-y-auto px-4 pb-4 space-y-3">
             {transcript.length === 0 ? (
-              <div className="text-xs text-[#6B7280] italic">
+              <div className="text-xs text-zinc-500 italic">
                 Conversation will appear here...
               </div>
             ) : (
               transcript.map((entry) => (
                 <div key={entry.id} className="text-xs">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className={entry.speaker === 'interviewer' ? 'text-blue-400' : 'text-green-400'}>
-                      {entry.speaker === 'interviewer' ? '🎤' : '👤'}
-                    </span>
-                    <span className="font-medium text-[#9CA3AF]">
+                  <div className="flex items-center gap-2 mb-1">
+                    {entry.speaker === 'interviewer' ? (
+                      <Mic className="h-3.5 w-3.5 text-zinc-300" />
+                    ) : (
+                      <User className="h-3.5 w-3.5 text-zinc-300" />
+                    )}
+                    <span className="font-medium text-zinc-300">
                       {entry.speaker === 'interviewer' ? interviewerName : candidateName}
                     </span>
                   </div>
-                  <p className="text-[#F5F5F5] pl-5 leading-relaxed">
-                    {entry.text}
-                  </p>
+                  <p className="text-zinc-200 pl-6 leading-relaxed">{entry.text}</p>
                 </div>
               ))
             )}

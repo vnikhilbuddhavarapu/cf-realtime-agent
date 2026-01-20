@@ -117,10 +117,10 @@ function App() {
       )}
       {currentStep === 'preparation' && (
         isCreatingRoleplay ? (
-          <div className="min-h-screen bg-[#0F0F0F] text-[#F5F5F5] flex items-center justify-center">
+          <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center">
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 border-4 border-[#3B82F6] border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-[#9CA3AF]">Setting up your interview...</p>
+              <div className="w-14 h-14 border-2 border-zinc-800 border-t-zinc-200 rounded-full animate-spin mx-auto" />
+              <p className="text-zinc-400">Setting up your interview...</p>
             </div>
           </div>
         ) : (

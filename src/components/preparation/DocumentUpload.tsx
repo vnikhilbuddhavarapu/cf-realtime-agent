@@ -1,4 +1,17 @@
 import { useState } from 'react';
+import {
+  Briefcase,
+  CheckCircle2,
+  ChevronLeft,
+  FileText,
+  Loader2,
+  Sparkles,
+  UploadCloud,
+  XCircle,
+} from "lucide-react";
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { Card, CardContent, CardDescription, CardTitle } from "../ui/Card";
 
 interface DocumentUploadProps {
   roleplayId: string;
@@ -119,22 +132,17 @@ export function DocumentUpload({ roleplayId, onContinue, onBack }: DocumentUploa
   const isUploading = resumeUpload.status === 'uploading' || jdUpload.status === 'uploading';
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-[#0F0F0F] via-[#1a1a1a] to-[#2A2A2A] text-[#F5F5F5]">
+    <div className="min-h-screen bg-linear-to-br from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">
       {/* Header */}
-      <header className="border-b border-[#2A2A2A] bg-[#0F0F0F]/50 backdrop-blur-sm">
+      <header className="border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-[#9CA3AF] hover:text-[#F5F5F5] transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+          <Button onClick={onBack} variant="ghost" size="sm">
+            <ChevronLeft className="h-4 w-4" />
             Back
-          </button>
+          </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-linear-to-br from-[#3B82F6] to-[#2563EB] rounded-lg" />
-            <span className="text-xl font-bold">InterviewAI</span>
+            <img src="/icon.png" className="w-7 h-7 rounded-xl bg-black" />
+            <span className="text-xl font-semibold tracking-tight">InterviewAI</span>
           </div>
           <div className="w-20" />
         </div>
@@ -143,34 +151,41 @@ export function DocumentUpload({ roleplayId, onContinue, onBack }: DocumentUploa
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#10B981]/20 text-[#10B981] rounded-full text-sm mb-4">
-            <span>📄</span>
-            <span>Optional</span>
+          <div className="flex justify-center mb-4">
+            <Badge variant="subtle">Optional</Badge>
           </div>
-          <h1 className="text-4xl font-bold mb-2">Add Your Documents</h1>
-          <p className="text-[#9CA3AF]">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
+            Add your documents
+          </h1>
+          <p className="text-zinc-400">
             Upload or paste your resume and job description for personalized questions
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {/* Resume Upload */}
-          <div className="bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <span>📝</span> Your Resume
-              </h3>
-              {resumeUpload.status === 'success' && (
-                <span className="text-xs bg-[#10B981]/20 text-[#10B981] px-2 py-1 rounded-full">
-                  ✓ {resumeUpload.chunksIndexed} sections indexed
-                </span>
-              )}
-            </div>
+          <Card>
+            <CardContent className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-zinc-300" />
+                    Resume
+                  </CardTitle>
+                  <CardDescription>Used to personalize questions and feedback.</CardDescription>
+                </div>
+                {resumeUpload.status === 'success' && (
+                  <Badge variant="success">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {resumeUpload.chunksIndexed} indexed
+                  </Badge>
+                )}
+              </div>
 
             {/* File Upload */}
             <div className="mb-4">
               <label className="block">
-                <div className="border-2 border-dashed border-[#2A2A2A] rounded-lg p-4 text-center cursor-pointer hover:border-[#3B82F6]/50 transition-colors">
+                <div className="border border-dashed border-zinc-800 rounded-2xl p-4 text-center hover:border-zinc-700 transition-colors">
                   <input
                     type="file"
                     accept=".txt,.pdf"
@@ -181,22 +196,18 @@ export function DocumentUpload({ roleplayId, onContinue, onBack }: DocumentUploa
                     }}
                     disabled={resumeUpload.status === 'uploading'}
                   />
-                  <svg className="w-8 h-8 mx-auto mb-2 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="text-sm text-[#9CA3AF]">
-                    Drop a file or click to upload
-                  </p>
-                  <p className="text-xs text-[#6B7280] mt-1">.txt or .pdf</p>
+                  <UploadCloud className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
+                  <p className="text-sm text-zinc-200">Drop a file or click to upload</p>
+                  <p className="text-xs text-zinc-500 mt-1">.txt or .pdf</p>
                 </div>
               </label>
             </div>
 
             {/* Or Divider */}
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex-1 h-px bg-[#2A2A2A]" />
-              <span className="text-xs text-[#6B7280]">or paste below</span>
-              <div className="flex-1 h-px bg-[#2A2A2A]" />
+              <div className="flex-1 h-px bg-zinc-800" />
+              <span className="text-xs text-zinc-500">or paste below</span>
+              <div className="flex-1 h-px bg-zinc-800" />
             </div>
 
             {/* Text Area */}
@@ -205,41 +216,49 @@ export function DocumentUpload({ roleplayId, onContinue, onBack }: DocumentUploa
               onChange={(e) => setResumeText(e.target.value)}
               onBlur={() => handlePasteAndUpload(resumeText, 'resume', setResumeUpload)}
               placeholder="Paste your resume text here..."
-              className="w-full h-32 px-4 py-3 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg focus:border-[#3B82F6] focus:outline-none transition-colors resize-none text-sm"
+              className="w-full h-32 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-zinc-600 focus:outline-none transition-colors resize-none text-sm"
               disabled={resumeUpload.status === 'uploading'}
             />
 
             {/* Status */}
             {resumeUpload.status === 'uploading' && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-[#3B82F6]">
-                <div className="w-4 h-4 border-2 border-[#3B82F6] border-t-transparent rounded-full animate-spin" />
+              <div className="mt-3 flex items-center gap-2 text-sm text-zinc-200">
+                <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
                 {resumeUpload.message}
               </div>
             )}
             {resumeUpload.status === 'error' && (
-              <div className="mt-3 text-sm text-[#EF4444]">
-                ✗ {resumeUpload.message}
+              <div className="mt-3 text-sm text-red-300 flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                {resumeUpload.message}
               </div>
             )}
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Job Description Upload */}
-          <div className="bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <span>💼</span> Job Description
-              </h3>
-              {jdUpload.status === 'success' && (
-                <span className="text-xs bg-[#10B981]/20 text-[#10B981] px-2 py-1 rounded-full">
-                  ✓ {jdUpload.chunksIndexed} sections indexed
-                </span>
-              )}
-            </div>
+          <Card>
+            <CardContent className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-zinc-300" />
+                    Job description
+                  </CardTitle>
+                  <CardDescription>Align questions to your target role.</CardDescription>
+                </div>
+                {jdUpload.status === 'success' && (
+                  <Badge variant="success">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {jdUpload.chunksIndexed} indexed
+                  </Badge>
+                )}
+              </div>
 
             {/* File Upload */}
             <div className="mb-4">
               <label className="block">
-                <div className="border-2 border-dashed border-[#2A2A2A] rounded-lg p-4 text-center cursor-pointer hover:border-[#3B82F6]/50 transition-colors">
+                <div className="border border-dashed border-zinc-800 rounded-2xl p-4 text-center hover:border-zinc-700 transition-colors">
                   <input
                     type="file"
                     accept=".txt,.pdf"
@@ -250,22 +269,18 @@ export function DocumentUpload({ roleplayId, onContinue, onBack }: DocumentUploa
                     }}
                     disabled={jdUpload.status === 'uploading'}
                   />
-                  <svg className="w-8 h-8 mx-auto mb-2 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="text-sm text-[#9CA3AF]">
-                    Drop a file or click to upload
-                  </p>
-                  <p className="text-xs text-[#6B7280] mt-1">.txt or .pdf</p>
+                  <UploadCloud className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
+                  <p className="text-sm text-zinc-200">Drop a file or click to upload</p>
+                  <p className="text-xs text-zinc-500 mt-1">.txt or .pdf</p>
                 </div>
               </label>
             </div>
 
             {/* Or Divider */}
             <div className="flex items-center gap-4 mb-4">
-              <div className="flex-1 h-px bg-[#2A2A2A]" />
-              <span className="text-xs text-[#6B7280]">or paste below</span>
-              <div className="flex-1 h-px bg-[#2A2A2A]" />
+              <div className="flex-1 h-px bg-zinc-800" />
+              <span className="text-xs text-zinc-500">or paste below</span>
+              <div className="flex-1 h-px bg-zinc-800" />
             </div>
 
             {/* Text Area */}
@@ -273,57 +288,59 @@ export function DocumentUpload({ roleplayId, onContinue, onBack }: DocumentUploa
               value={jdText}
               onChange={(e) => setJdText(e.target.value)}
               onBlur={() => handlePasteAndUpload(jdText, 'jd', setJdUpload)}
-              placeholder="Paste the job description here..."
-              className="w-full h-32 px-4 py-3 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg focus:border-[#3B82F6] focus:outline-none transition-colors resize-none text-sm"
+              placeholder="Paste job description text here..."
+              className="w-full h-32 px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-zinc-600 focus:outline-none transition-colors resize-none text-sm"
               disabled={jdUpload.status === 'uploading'}
             />
 
             {/* Status */}
             {jdUpload.status === 'uploading' && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-[#3B82F6]">
-                <div className="w-4 h-4 border-2 border-[#3B82F6] border-t-transparent rounded-full animate-spin" />
+              <div className="mt-3 flex items-center gap-2 text-sm text-zinc-200">
+                <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
                 {jdUpload.message}
               </div>
             )}
             {jdUpload.status === 'error' && (
-              <div className="mt-3 text-sm text-[#EF4444]">
-                ✗ {jdUpload.message}
+              <div className="mt-3 text-sm text-red-300 flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                {jdUpload.message}
               </div>
             )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Info Box */}
         {hasAnyDocument && (
-          <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl p-4 mb-8">
-            <div className="flex items-start gap-3">
-              <span className="text-xl">✨</span>
-              <div>
-                <p className="font-medium text-[#10B981]">Documents Ready!</p>
-                <p className="text-sm text-[#9CA3AF] mt-1">
-                  Your AI interviewer will now ask personalized questions based on your background and the job requirements.
-                </p>
-              </div>
-            </div>
+          <div className="mb-8">
+            <Card>
+              <CardContent>
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-xl border border-zinc-800 bg-zinc-950 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-zinc-200" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-zinc-100">Documents ready</p>
+                    <p className="text-sm text-zinc-400 mt-1">
+                      Your interviewer will ask more personalized questions based on your background and the role.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {/* Action Buttons */}
         <div className="flex justify-between items-center">
-          <button
-            onClick={onContinue}
-            disabled={isUploading}
-            className="text-[#9CA3AF] hover:text-[#F5F5F5] transition-colors disabled:opacity-50"
-          >
-            Skip for now →
-          </button>
-          <button
-            onClick={onContinue}
-            disabled={isUploading}
-            className="px-8 py-4 bg-[#3B82F6] hover:bg-[#2563EB] disabled:bg-[#2A2A2A] disabled:cursor-not-allowed rounded-lg text-lg font-semibold transition-all hover:scale-105 shadow-lg shadow-[#3B82F6]/20"
-          >
-            {isUploading ? 'Processing...' : 'Start Interview'}
-          </button>
+          <p className="text-sm text-zinc-500">
+            {hasAnyDocument
+              ? 'Documents uploaded successfully!'
+              : 'You can skip this step if you want'}
+          </p>
+          <Button onClick={onContinue} disabled={isUploading} size="lg">
+            {isUploading ? 'Uploading...' : 'Continue to interview'}
+          </Button>
         </div>
       </main>
     </div>

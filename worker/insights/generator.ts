@@ -230,13 +230,14 @@ Which NEW components does this response contain? Only list components that are c
 Respond in JSON format: {"situation": true/false, "task": true/false, "action": true/false, "result": true/false}
 Only set true for components that are NEWLY covered in this response.`;
 
-      const aiResponse = await (this.env.AI as any).run(
-        "@cf/meta/llama-3.1-8b-instruct",
-        {
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 100,
-        },
-      );
+      const ai = this.env.AI as unknown as {
+        run: (model: string, input: unknown) => Promise<unknown>;
+      };
+
+      const aiResponse = await ai.run("@cf/meta/llama-3.1-8b-instruct", {
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 100,
+      });
 
       const result = (aiResponse as { response?: string }).response || "";
 

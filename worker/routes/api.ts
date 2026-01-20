@@ -33,6 +33,33 @@ export async function handleCreateSession(env: Env): Promise<Response> {
   }
 }
 
+export async function handleMeetingReady(
+  env: Env,
+  meetingId: string,
+): Promise<Response> {
+  try {
+    const agentId = env.INTERVIEW_AGENT.idFromName(meetingId);
+    const agentStub = env.INTERVIEW_AGENT.get(agentId);
+
+    const readyResponse = await agentStub.fetch("http://internal/ready");
+    if (!readyResponse.ok) {
+      return errorResponse("Failed to fetch agent readiness", 502);
+    }
+
+    const readyJson = (await readyResponse.json()) as {
+      ready: boolean;
+      initInProgress: boolean;
+      hasPipeline: boolean;
+      meetingJoined: boolean;
+    };
+
+    return jsonResponse(readyJson);
+  } catch (error) {
+    logger.error("Failed to get meeting readiness", error);
+    return errorResponse("Failed to get meeting readiness", 500);
+  }
+}
+
 export async function handleGetSession(
   env: Env,
   sessionId: string,
@@ -195,8 +222,8 @@ export async function handleStartMeeting(
       },
       body: JSON.stringify({
         name: "Interview Candidate",
-        presetName: env.REALTIME_PRESET_NAME,
-        customParticipantId: `human-${meetingId}`,
+        preset_name: env.REALTIME_PRESET_NAME,
+        custom_participant_id: `human-${meetingId}`,
       }),
     });
 

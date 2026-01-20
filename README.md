@@ -1,92 +1,130 @@
-# AI Interview Coach
+ # AI Interview Coach
 
-Real-time AI-powered interview practice platform built on Cloudflare's edge infrastructure.
+ Real-time interview practice with a voice-based AI interviewer. Built on Cloudflare Workers + Durable Objects, with WebRTC audio via Cloudflare RealtimeKit.
 
-## Features
+ ## What it does
 
-- **Real-time Voice Interviews** - WebRTC-powered conversations with AI interviewers
-- **Customizable Personas** - Choose interviewer style, demeanor, and difficulty
-- **Multiple Scenarios** - Phone screens, technical rounds, behavioral interviews
-- **Document Upload** - Upload resume and job description for personalized questions
-- **RAG-Powered Context** - AI uses your background to ask relevant questions
-- **Real-time Coaching HUD** - Live insights, STAR progress tracking, and tips
+ - **Live voice interview** (WebRTC)
+ - **Configurable interviewer persona + scenario** (phone screen, behavioral, technical)
+ - **Optional document grounding** (resume + job description) via Vectorize RAG
+ - **Real-time coaching HUD** (question type, STAR progress, tips)
+ - **Post-interview report** (summary + scoring)
 
-## Tech Stack
+ ## Why Cloudflare Realtime Agents
 
-- **Frontend**: React + TypeScript + Vite + TailwindCSS
-- **Backend**: Cloudflare Workers + Durable Objects
-- **Real-time**: RealtimeKit (WebRTC) for voice + WebSocket for insights
-- **AI**: Workers AI (Llama 3.1), Deepgram STT, ElevenLabs TTS
-- **RAG**: Vectorize for resume/JD context
+ This project follows the pattern from Cloudflare’s Realtime Agents guide:
+ https://developers.cloudflare.com/realtime/agents/getting-started/
 
-## Project Structure
+ Cloudflare’s approach is a good fit here because the **meeting participant** (the agent) runs as a Durable Object at the edge and can join the same WebRTC room as the user, keeping the “audio loop” short:
 
-```
-src/                          # React frontend
-├── components/
-│   ├── landing/              # Landing page
-│   ├── persona/              # Scenario & persona customization
-│   ├── preparation/          # Document upload (resume/JD)
-│   └── meeting/              # Interview room + InsightsHUD
-├── hooks/                    # React hooks (useSession)
-└── lib/                      # API client, types
+ - Durable Objects provide the long-lived stateful runtime for an agent.
+ - RealtimeKit abstracts WebRTC/SFU plumbing but still gives you programmatic access to a meeting.
+ - Workers AI + Vectorize integrate cleanly into the same Worker.
 
-worker/                       # Cloudflare Worker backend
-├── agents/                   # InterviewAgent (RealtimeAgent)
-├── insights/                 # InsightGenerator for real-time coaching
-├── routes/                   # API routes
-├── sessions/                 # SessionManager (Durable Object)
-├── rag/                      # RAG service (parse, chunk, index, query)
-└── utils/                    # RealtimeKit, logging utilities
-```
+ ## Tech stack
 
-## Architecture
+ - **Frontend**: React + TypeScript + Vite + Tailwind
+ - **Backend**: Cloudflare Workers + Durable Objects
+ - **Real-time audio**: Cloudflare RealtimeKit (WebRTC)
+ - **STT**: Deepgram
+ - **LLM**: Workers AI
+ - **TTS**: ElevenLabs
+ - **RAG**: Vectorize
+
+ ## Project structure
 
 ```
-┌─────────────┐    WebRTC     ┌──────────────────┐
-│   Browser   │◄────────────►│  RealtimeKit SFU │
-│  (React UI) │               └────────┬─────────┘
-└──────┬──────┘                        │
-       │ REST                          │ Audio
-       ▼                               ▼
-┌──────────────┐              ┌──────────────────┐
-│   Worker     │◄────────────►│  InterviewAgent  │
-│  (API Routes)│              │ (Durable Object) │
-└──────┬───────┘              └────────┬─────────┘
-       │                               │
-       ▼                               ▼
-┌──────────────┐              ┌──────────────────┐
-│ SessionMgr   │              │   AI Pipeline    │
-│ (DO + SQLite)│              │ STT→LLM→TTS      │
-└──────────────┘              └────────┬─────────┘
-                                       │
-                              ┌────────▼─────────┐
-                              │    Vectorize     │
-                              │  (RAG Context)   │
-                              └──────────────────┘
+ src/                          # React frontend
+ ├── components/
+ │   ├── landing/              # Entry flow
+ │   ├── persona/              # Scenario + persona customization
+ │   ├── preparation/          # Resume/JD upload
+ │   ├── meeting/              # MeetingRoom + InsightsHUD
+ │   └── report/               # Post-interview report UI
+ ├── hooks/                    # React hooks (useSession)
+ └── lib/                      # API client, shared types
+
+ worker/                       # Cloudflare Worker backend
+ ├── index.ts                  # Router + WebSocket forwarding
+ ├── routes/                   # REST API handlers (/api/*)
+ ├── agents/                   # InterviewAgent Durable Object (RealtimeAgent)
+ ├── insights/                 # InsightGenerator (WS coaching stream)
+ ├── rag/                      # Parsing/chunking + Vectorize indexing/query
+ ├── report/                   # Report generation
+ ├── sessions/                 # SessionManager Durable Object (SQLite)
+ └── utils/                    # RealtimeKit helpers, logging
 ```
 
-## Real-time Insights HUD
+ ## Architecture (high level)
 
-During interviews, a coaching sidebar provides:
-- **Coaching Tips** - Actionable advice based on your responses
-- **Question Type** - Classification (behavioral, technical, situational, etc.)
-- **STAR Progress** - For behavioral questions, tracks Situation/Task/Action/Result
-- **Live Transcript** - Real-time conversation log
+ ```mermaid
+ flowchart LR
+   U[Browser (React)]
+   API[Worker API routes]
+   SFU[Cloudflare RealtimeKit (WebRTC + SFU)]
+   IA[InterviewAgent (Durable Object)]
+   SM[SessionManager (Durable Object + SQLite)]
+   IG[InsightGenerator]
+   STT[Deepgram STT]
+   LLM[Workers AI]
+   TTS[ElevenLabs TTS]
+   V[(Vectorize)]
 
-The InsightsHUD connects via WebSocket to receive updates from the InsightGenerator running in the Durable Object.
+   U -->|REST /api/*| API
+   API --> SM
+   API -->|init()| IA
 
-## Setup
+   U <--> |WebRTC audio| SFU
+   IA <--> |join + produce/consume| SFU
 
-1. Copy `.dev.vars.example` to `.dev.vars` and add API keys
-2. `npm install`
-3. `npm run dev` (local) or `npm run deploy` (production)
+   IA --> STT
+   STT --> LLM
+   LLM --> TTS
+   TTS --> IA
 
-## Environment Variables
+   IA --> IG
+   IG -->|WebSocket /api/insights/ws| U
 
-```
-REALTIMEKIT_API_KEY=       # Cloudflare RealtimeKit
-REALTIMEKIT_ORG_ID=        # RealtimeKit org ID
-DEEPGRAM_API_KEY=          # Speech-to-text
-ELEVENLABS_API_KEY=        # Text-to-speech
-```
+   IA -->|RAG query| V
+   API -->|RAG index/upload| V
+ ```
+
+ ## Setup
+
+ - Copy `.dev.vars.example` to `.dev.vars` (for local dev)
+ - Install deps: `npm install`
+ - Run locally: `npm run dev`
+ - Deploy: `npm run deploy`
+
+ See `SETUP.md` for the step-by-step Cloudflare RealtimeKit app setup.
+
+ ## Environment variables
+
+ These are required (local via `.dev.vars`, prod via Wrangler secrets/vars):
+
+ ```bash
+ # Cloudflare
+ ACCOUNT_ID=
+ API_TOKEN=
+ REALTIME_APP_ID=
+ REALTIME_PRESET_ID=
+ REALTIME_PRESET_NAME=
+
+ # Speech / voice
+ DEEPGRAM_API_KEY=
+ ELEVENLABS_API_KEY=
+
+ # Optional
+ ELEVENLABS_VOICE_FEMALE=
+ ELEVENLABS_VOICE_MALE=
+ ELEVENLABS_MODEL=
+ ```
+
+ ## References
+
+ - Cloudflare Realtime overview: https://developers.cloudflare.com/realtime/
+ - RealtimeKit: https://developers.cloudflare.com/realtime/realtimekit/
+ - Realtime Agents guide: https://developers.cloudflare.com/realtime/agents/getting-started/
+ - Durable Objects: https://developers.cloudflare.com/durable-objects/
+ - Workers AI: https://developers.cloudflare.com/workers-ai/
+ - Vectorize: https://developers.cloudflare.com/vectorize/

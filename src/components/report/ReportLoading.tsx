@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Loader2 } from "lucide-react";
 
 const LOADING_MESSAGES = [
   'Ending interview session...',
@@ -21,38 +22,33 @@ export function ReportLoading() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F] text-[#F5F5F5] flex items-center justify-center">
-      <div className="text-center space-y-6 max-w-md px-4">
-        {/* Animated spinner */}
-        <div className="relative w-24 h-24 mx-auto">
-          <div className="absolute inset-0 border-4 border-[#2A2A2A] rounded-full" />
-          <div className="absolute inset-0 border-4 border-transparent border-t-[#3B82F6] rounded-full animate-spin" />
-          <div className="absolute inset-2 border-4 border-transparent border-t-[#60A5FA] rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+    <div className="min-h-screen bg-zinc-950 text-zinc-50 flex items-center justify-center">
+      <div className="text-center space-y-6 max-w-md px-6">
+        <div className="mx-auto h-16 w-16 rounded-2xl border border-zinc-800 bg-zinc-900/40 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-zinc-200" />
         </div>
 
-        {/* Title */}
         <div>
-          <h2 className="text-2xl font-bold mb-2">Generating Your Report</h2>
-          <p className="text-[#9CA3AF] transition-opacity duration-300">
+          <h2 className="text-2xl font-semibold tracking-tight mb-2">
+            Generating your report
+          </h2>
+          <p className="text-zinc-400 transition-opacity duration-300">
             {LOADING_MESSAGES[messageIndex]}
           </p>
         </div>
 
-        {/* Progress dots */}
         <div className="flex justify-center gap-2">
           {LOADING_MESSAGES.map((_, idx) => (
             <div
               key={idx}
               className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                idx <= messageIndex ? 'bg-[#3B82F6]' : 'bg-[#2A2A2A]'
+                idx <= messageIndex ? 'bg-zinc-200' : 'bg-zinc-800'
               }`}
             />
           ))}
         </div>
 
-        <p className="text-[#6B7280] text-sm">
-          This may take a few seconds...
-        </p>
+        <p className="text-zinc-500 text-sm">This may take a few seconds...</p>
       </div>
     </div>
   );

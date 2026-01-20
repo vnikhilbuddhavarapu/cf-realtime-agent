@@ -1,1 +1,69 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+ .rtk-theme {
+   --rtk-font-family: ui-sans-serif, system-ui, sans-serif;
+
+   --rtk-colors-background-1000: 9 9 11;
+   --rtk-colors-background-900: 24 24 27;
+   --rtk-colors-background-800: 39 39 42;
+   --rtk-colors-background-700: 63 63 70;
+   --rtk-colors-background-600: 82 82 91;
+
+   --rtk-colors-video-bg: 9 9 11;
+
+   --rtk-colors-text-1000: 244 244 245;
+   --rtk-colors-text-900: 244 244 245 / 0.88;
+   --rtk-colors-text-800: 244 244 245 / 0.76;
+   --rtk-colors-text-700: 244 244 245 / 0.64;
+   --rtk-colors-text-600: 244 244 245 / 0.52;
+
+   --rtk-colors-brand-300: 244 244 245;
+   --rtk-colors-brand-400: 228 228 231;
+   --rtk-colors-brand-500: 244 244 245;
+   --rtk-colors-brand-600: 228 228 231;
+   --rtk-colors-brand-700: 212 212 216;
+
+   --rtk-colors-text-on-brand-1000: 9 9 11;
+   --rtk-colors-text-on-brand-900: 9 9 11;
+   --rtk-colors-text-on-brand-800: 9 9 11;
+   --rtk-colors-text-on-brand-700: 9 9 11;
+   --rtk-colors-text-on-brand-600: 9 9 11;
+
+   --rtk-colors-danger: 239 68 68;
+   --rtk-colors-success: 16 185 129;
+   --rtk-colors-warning: 245 158 11;
+
+   --rtk-border-radius-sm: 12px;
+   --rtk-border-radius-md: 16px;
+   --rtk-border-radius-lg: 16px;
+ }
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: rgb(9 9 11);
+  color: rgb(244 244 245);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100%;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

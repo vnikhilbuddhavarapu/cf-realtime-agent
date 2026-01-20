@@ -6,6 +6,8 @@ import type {
   TranscriptEntry,
   ScenarioConfig,
   PersonaConfig,
+  ReportConfidence,
+  ReportEvidence,
 } from "../types";
 
 interface ReportGeneratorConfig {
@@ -28,6 +30,71 @@ export class ReportGenerator {
     this.logger = new Logger("ReportGenerator");
   }
 
+  private countWords(text: string): number {
+    const trimmed = text.trim();
+    if (!trimmed) return 0;
+    return trimmed.split(/\s+/).filter(Boolean).length;
+  }
+
+  private computeEvidence(transcript: TranscriptEntry[]): ReportEvidence {
+    let candidateTurns = 0;
+    let candidateWordCount = 0;
+    let interviewerTurns = 0;
+    let interviewerWordCount = 0;
+
+    for (const entry of transcript) {
+      if (entry.speaker === "user") {
+        candidateTurns += 1;
+        candidateWordCount += this.countWords(entry.text);
+      } else {
+        interviewerTurns += 1;
+        interviewerWordCount += this.countWords(entry.text);
+      }
+    }
+
+    return {
+      candidateTurns,
+      candidateWordCount,
+      interviewerTurns,
+      interviewerWordCount,
+    };
+  }
+
+  private computeConfidence(evidence: ReportEvidence): {
+    confidence: ReportConfidence;
+    confidenceReason: string;
+    scoreCap: number;
+  } {
+    const lowConfidence =
+      evidence.candidateTurns < 2 || evidence.candidateWordCount < 60;
+    if (lowConfidence) {
+      return {
+        confidence: "low",
+        confidenceReason:
+          "Insufficient evidence: the interview was too brief to reliably assess performance.",
+        scoreCap: 4,
+      };
+    }
+
+    const mediumConfidence =
+      evidence.candidateTurns < 5 || evidence.candidateWordCount < 200;
+    if (mediumConfidence) {
+      return {
+        confidence: "medium",
+        confidenceReason:
+          "Limited evidence: a longer interview would produce a more reliable score.",
+        scoreCap: 5,
+      };
+    }
+
+    return {
+      confidence: "high",
+      confidenceReason:
+        "Sufficient evidence to assess performance with confidence.",
+      scoreCap: 10,
+    };
+  }
+
   async generateReport(): Promise<InterviewReport> {
     this.logger.info("Starting report generation", {
       roleplayId: this.config.roleplayId,
@@ -39,9 +106,13 @@ export class ReportGenerator {
       (this.config.endTime - this.config.startTime) / 1000,
     );
 
+    const evidence = this.computeEvidence(this.config.transcript);
+    const { confidence, confidenceReason, scoreCap } =
+      this.computeConfidence(evidence);
+
     // Generate all analysis in parallel for speed
     const [scores, feedback, starAnalysis, summary] = await Promise.all([
-      this.generateScores(transcriptText),
+      this.generateScores(transcriptText, { confidence, scoreCap, evidence }),
       this.generateFeedback(transcriptText),
       this.generateSTARAnalysis(transcriptText),
       this.generateSummary(transcriptText),
@@ -56,6 +127,9 @@ export class ReportGenerator {
       duration,
       overallScore: scores.overall,
       categoryScores: scores.categories,
+      confidence,
+      confidenceReason,
+      evidence,
       strengths: feedback.strengths,
       areasForImprovement: feedback.improvements,
       actionableTips: feedback.tips,
@@ -83,7 +157,14 @@ export class ReportGenerator {
       .join("\n");
   }
 
-  private async generateScores(transcript: string): Promise<{
+  private async generateScores(
+    transcript: string,
+    meta: {
+      confidence: ReportConfidence;
+      scoreCap: number;
+      evidence: ReportEvidence;
+    },
+  ): Promise<{
     overall: number;
     categories: CategoryScore[];
   }> {
@@ -93,11 +174,22 @@ Interview Type: ${this.config.scenario.name}
 Difficulty: ${this.config.scenario.difficulty}
 Focus Areas: ${this.config.scenario.focusAreas.join(", ")}
 
+Evidence Summary:
+- Candidate turns: ${meta.evidence.candidateTurns}
+- Candidate words: ${meta.evidence.candidateWordCount}
+- Interviewer turns: ${meta.evidence.interviewerTurns}
+- Interviewer words: ${meta.evidence.interviewerWordCount}
+- Confidence: ${meta.confidence}
+- Score cap (max allowed overall/category): ${meta.scoreCap}
+
 Transcript:
 ${transcript}
 
 Analyze the candidate's performance and provide scores (1-10) for each category.
-Even if the transcript is short, provide your best assessment based on available data.
+Only score what is clearly supported by the transcript. If evidence is limited, score conservatively.
+Keep the overall score and each category score at or below the score cap.
+
+For each category's feedback, include one short supporting quote from the transcript.
 
 Respond in JSON format ONLY:
 {
@@ -126,9 +218,35 @@ Respond in JSON format ONLY:
 
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+
+        const safeCategories: CategoryScore[] = Array.isArray(parsed.categories)
+          ? parsed.categories
+          : this.getDefaultCategories();
+
+        const cappedCategories = safeCategories.map((c) => {
+          const numericScore =
+            typeof c?.score === "number" ? c.score : Number(c?.score);
+          const clamped = Number.isFinite(numericScore)
+            ? Math.min(10, Math.max(1, numericScore))
+            : 5;
+          return {
+            category: String(c?.category ?? ""),
+            score: Math.min(meta.scoreCap, clamped),
+            feedback: String(c?.feedback ?? ""),
+          };
+        });
+
+        const numericOverall =
+          typeof parsed.overall === "number"
+            ? parsed.overall
+            : Number(parsed.overall);
+        const clampedOverall = Number.isFinite(numericOverall)
+          ? Math.min(10, Math.max(1, numericOverall))
+          : 5;
+
         return {
-          overall: Math.min(10, Math.max(1, parsed.overall || 5)),
-          categories: parsed.categories || this.getDefaultCategories(),
+          overall: Math.min(meta.scoreCap, clampedOverall),
+          categories: cappedCategories,
         };
       }
     } catch (error) {
@@ -136,8 +254,11 @@ Respond in JSON format ONLY:
     }
 
     return {
-      overall: 5,
-      categories: this.getDefaultCategories(),
+      overall: Math.min(meta.scoreCap, 5),
+      categories: this.getDefaultCategories().map((c) => ({
+        ...c,
+        score: Math.min(meta.scoreCap, c.score),
+      })),
     };
   }
 
@@ -168,7 +289,8 @@ Candidate: ${this.config.persona.candidateName}
 Transcript:
 ${transcript}
 
-Provide constructive feedback. Even if the transcript is short, give your best assessment.
+Provide constructive feedback based only on what is supported by the transcript.
+If the transcript is very short, avoid overly positive claims and focus on next steps.
 
 Respond in JSON format ONLY:
 {

@@ -1,4 +1,17 @@
 import { useState } from 'react';
+import {
+  ArrowRight,
+  Briefcase,
+  ChevronLeft,
+  Cpu,
+  MessageSquareText,
+  Phone,
+  SlidersHorizontal,
+  Target,
+  Theater,
+  Trophy,
+  User,
+} from "lucide-react";
 import type {
   PersonaConfig,
   ScenarioConfig,
@@ -10,6 +23,10 @@ import type {
   VoiceId,
 } from '../../lib/types';
 import { FOCUS_AREA_OPTIONS, VOICE_OPTIONS } from '../../lib/scenarios';
+import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { Card, CardContent, CardDescription, CardTitle } from "../ui/Card";
+import { cn } from "../../lib/cn";
 
 interface PersonaCustomizerProps {
   scenarioPreset: ScenarioPreset;
@@ -46,6 +63,25 @@ const feedbackStyles: { value: FeedbackStyle; label: string; description: string
 const durations = [15, 30, 45, 60];
 
 export function PersonaCustomizer({ scenarioPreset, onContinue, onBack }: PersonaCustomizerProps) {
+  const getScenarioIcon = (scenarioId: ScenarioPreset["id"]) => {
+    switch (scenarioId) {
+      case "phone_screen":
+        return Phone;
+      case "behavioral":
+        return Target;
+      case "technical":
+        return Cpu;
+      case "hiring_manager":
+        return Briefcase;
+      case "final_round":
+        return Trophy;
+      default:
+        return Target;
+    }
+  };
+
+  const ScenarioIcon = getScenarioIcon(scenarioPreset.id);
+
   // Scenario settings (from preset, customizable)
   const [difficulty, setDifficulty] = useState<Difficulty>(scenarioPreset.defaultDifficulty);
   const [duration, setDuration] = useState(scenarioPreset.defaultDuration);
@@ -94,22 +130,17 @@ export function PersonaCustomizer({ scenarioPreset, onContinue, onBack }: Person
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-[#0F0F0F] via-[#1a1a1a] to-[#2A2A2A] text-[#F5F5F5]">
+    <div className="min-h-screen bg-linear-to-br from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-50">
       {/* Header */}
-      <header className="border-b border-[#2A2A2A] bg-[#0F0F0F]/50 backdrop-blur-sm">
+      <header className="border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-[#9CA3AF] hover:text-[#F5F5F5] transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+          <Button onClick={onBack} variant="ghost" size="sm">
+            <ChevronLeft className="h-4 w-4" />
             Back
-          </button>
+          </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-linear-to-br from-[#3B82F6] to-[#2563EB] rounded-lg" />
-            <span className="text-xl font-bold">InterviewAI</span>
+            <img src="/icon.png" className="w-7 h-7 rounded-xl bg-black" />
+            <span className="text-xl font-semibold tracking-tight">InterviewAI</span>
           </div>
           <div className="w-20" />
         </div>
@@ -118,112 +149,139 @@ export function PersonaCustomizer({ scenarioPreset, onContinue, onBack }: Person
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#3B82F6]/20 text-[#3B82F6] rounded-full text-sm mb-4">
-            <span>{scenarioPreset.icon}</span>
-            <span>{scenarioPreset.name}</span>
+          <div className="flex justify-center mb-4">
+            <Badge>
+              <ScenarioIcon className="h-3.5 w-3.5" />
+              {scenarioPreset.name}
+            </Badge>
           </div>
-          <h1 className="text-4xl font-bold mb-2">Customize Your Interview</h1>
-          <p className="text-[#9CA3AF]">
-            Tailor the experience to match your preparation goals
-          </p>
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-2">
+            Customize your interview
+          </h1>
+          <p className="text-zinc-400">Tailor the experience to match your preparation goals</p>
         </div>
 
         <div className="space-y-6">
           {/* Your Info */}
-          <div className="bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span>👤</span> Your Information
-            </h3>
+          <Card>
+            <CardContent>
+              <div className="flex items-start justify-between gap-6">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-zinc-300" />
+                    Your information
+                  </CardTitle>
+                  <CardDescription>Set names used in the simulation.</CardDescription>
+                </div>
+              </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-[#9CA3AF] mb-2">Your Name</label>
+                <label className="block text-sm text-zinc-400 mb-2">Your Name</label>
                 <input
                   type="text"
                   value={candidateName}
                   onChange={(e) => setCandidateName(e.target.value)}
                   placeholder="Enter your name"
-                  className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg focus:border-[#3B82F6] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-zinc-600 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm text-[#9CA3AF] mb-2">Target Company</label>
+                <label className="block text-sm text-zinc-400 mb-2">Target Company</label>
                 <input
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="e.g., Google, Stripe, Cloudflare"
-                  className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg focus:border-[#3B82F6] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-zinc-600 focus:outline-none transition-colors"
                 />
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Interviewer Identity */}
-          <div className="bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span>🎭</span> Interviewer Identity
-            </h3>
+          <Card>
+            <CardContent>
+              <div className="flex items-start justify-between gap-6 mb-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Theater className="h-4 w-4 text-zinc-300" />
+                    Interviewer identity
+                  </CardTitle>
+                  <CardDescription>Customize who you’re talking to.</CardDescription>
+                </div>
+              </div>
             <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm text-[#9CA3AF] mb-2">Interviewer Name</label>
+                <label className="block text-sm text-zinc-400 mb-2">Interviewer Name</label>
                 <input
                   type="text"
                   value={interviewerName}
                   onChange={(e) => setInterviewerName(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg focus:border-[#3B82F6] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-zinc-600 focus:outline-none transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-sm text-[#9CA3AF] mb-2">Interviewer Title</label>
+                <label className="block text-sm text-zinc-400 mb-2">Interviewer Title</label>
                 <input
                   type="text"
                   value={interviewerTitle}
                   onChange={(e) => setInterviewerTitle(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0F0F0F] border border-[#2A2A2A] rounded-lg focus:border-[#3B82F6] focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl focus:border-zinc-600 focus:outline-none transition-colors"
                 />
               </div>
             </div>
             {/* Voice Selection */}
             <div>
-              <label className="block text-sm text-[#9CA3AF] mb-2">Voice</label>
+              <label className="block text-sm text-zinc-400 mb-2">Voice</label>
               <div className="grid grid-cols-2 gap-3">
                 {VOICE_OPTIONS.map((voice) => (
                   <button
                     key={voice.id}
                     onClick={() => setVoiceId(voice.id)}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${
+                    className={cn(
+                      "p-3 rounded-xl border text-left transition-colors",
                       voiceId === voice.id
-                        ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                        : 'border-[#2A2A2A] hover:border-[#3B82F6]/50'
-                    }`}
+                        ? "border-zinc-200 bg-zinc-50/5"
+                        : "border-zinc-800 hover:border-zinc-700",
+                    )}
                   >
                     <div className="font-medium">{voice.name}</div>
-                    <div className="text-xs text-[#9CA3AF]">{voice.description}</div>
+                    <div className="text-xs text-zinc-400">{voice.description}</div>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Interview Style */}
-          <div className="bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span>💬</span> Interview Style
-            </h3>
+          <Card>
+            <CardContent>
+              <div className="flex items-start justify-between gap-6 mb-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquareText className="h-4 w-4 text-zinc-300" />
+                    Interview style
+                  </CardTitle>
+                  <CardDescription>How the interviewer behaves.</CardDescription>
+                </div>
+              </div>
             
             {/* Demeanor */}
             <div className="mb-4">
-              <label className="block text-sm text-[#9CA3AF] mb-2">Demeanor</label>
+              <label className="block text-sm text-zinc-400 mb-2">Demeanor</label>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 {demeanors.map((dem) => (
                   <button
                     key={dem.value}
                     onClick={() => setDemeanor(dem.value)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
+                    className={cn(
+                      "p-3 rounded-xl border transition-colors",
                       demeanor === dem.value
-                        ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                        : 'border-[#2A2A2A] hover:border-[#3B82F6]/50'
-                    }`}
+                        ? "border-zinc-200 bg-zinc-50/5"
+                        : "border-zinc-800 hover:border-zinc-700",
+                    )}
                   >
                     <div className="font-medium text-sm">{dem.label}</div>
                   </button>
@@ -233,20 +291,21 @@ export function PersonaCustomizer({ scenarioPreset, onContinue, onBack }: Person
 
             {/* Probing Level */}
             <div className="mb-4">
-              <label className="block text-sm text-[#9CA3AF] mb-2">Follow-up Intensity</label>
+              <label className="block text-sm text-zinc-400 mb-2">Follow-up Intensity</label>
               <div className="grid grid-cols-3 gap-2">
                 {probingLevels.map((level) => (
                   <button
                     key={level.value}
                     onClick={() => setProbingLevel(level.value)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
+                    className={cn(
+                      "p-3 rounded-xl border transition-colors",
                       probingLevel === level.value
-                        ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                        : 'border-[#2A2A2A] hover:border-[#3B82F6]/50'
-                    }`}
+                        ? "border-zinc-200 bg-zinc-50/5"
+                        : "border-zinc-800 hover:border-zinc-700",
+                    )}
                   >
                     <div className="font-medium text-sm">{level.label}</div>
-                    <div className="text-xs text-[#9CA3AF]">{level.description}</div>
+                    <div className="text-xs text-zinc-400">{level.description}</div>
                   </button>
                 ))}
               </div>
@@ -254,45 +313,55 @@ export function PersonaCustomizer({ scenarioPreset, onContinue, onBack }: Person
 
             {/* Feedback Style */}
             <div>
-              <label className="block text-sm text-[#9CA3AF] mb-2">Feedback Style</label>
+              <label className="block text-sm text-zinc-400 mb-2">Feedback Style</label>
               <div className="grid grid-cols-3 gap-2">
                 {feedbackStyles.map((style) => (
                   <button
                     key={style.value}
                     onClick={() => setFeedbackStyle(style.value)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
+                    className={cn(
+                      "p-3 rounded-xl border transition-colors",
                       feedbackStyle === style.value
-                        ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                        : 'border-[#2A2A2A] hover:border-[#3B82F6]/50'
-                    }`}
+                        ? "border-zinc-200 bg-zinc-50/5"
+                        : "border-zinc-800 hover:border-zinc-700",
+                    )}
                   >
                     <div className="font-medium text-sm">{style.label}</div>
-                    <div className="text-xs text-[#9CA3AF]">{style.description}</div>
+                    <div className="text-xs text-zinc-400">{style.description}</div>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Difficulty & Duration */}
-          <div className="bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span>⚙️</span> Difficulty & Duration
-            </h3>
+          <Card>
+            <CardContent>
+              <div className="flex items-start justify-between gap-6 mb-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <SlidersHorizontal className="h-4 w-4 text-zinc-300" />
+                    Difficulty & Duration
+                  </CardTitle>
+                  <CardDescription>Choose how hard and how long.</CardDescription>
+                </div>
+              </div>
             <div className="grid md:grid-cols-2 gap-6">
               {/* Difficulty */}
               <div>
-                <label className="block text-sm text-[#9CA3AF] mb-2">Difficulty</label>
+                <label className="block text-sm text-zinc-400 mb-2">Difficulty</label>
                 <div className="grid grid-cols-3 gap-2">
                   {difficulties.map((diff) => (
                     <button
                       key={diff.value}
                       onClick={() => setDifficulty(diff.value)}
-                      className={`p-3 rounded-lg border-2 transition-all ${
+                      className={cn(
+                        "p-3 rounded-xl border transition-colors",
                         difficulty === diff.value
-                          ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                          : 'border-[#2A2A2A] hover:border-[#3B82F6]/50'
-                      }`}
+                          ? "border-zinc-200 bg-zinc-50/5"
+                          : "border-zinc-800 hover:border-zinc-700",
+                      )}
                     >
                       <div className="font-medium text-sm">{diff.label}</div>
                     </button>
@@ -302,61 +371,69 @@ export function PersonaCustomizer({ scenarioPreset, onContinue, onBack }: Person
 
               {/* Duration */}
               <div>
-                <label className="block text-sm text-[#9CA3AF] mb-2">Duration</label>
+                <label className="block text-sm text-zinc-400 mb-2">Duration</label>
                 <div className="grid grid-cols-4 gap-2">
                   {durations.map((dur) => (
                     <button
                       key={dur}
                       onClick={() => setDuration(dur)}
-                      className={`p-3 rounded-lg border-2 transition-all ${
+                      className={cn(
+                        "p-3 rounded-xl border transition-colors",
                         duration === dur
-                          ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                          : 'border-[#2A2A2A] hover:border-[#3B82F6]/50'
-                      }`}
+                          ? "border-zinc-200 bg-zinc-50/5"
+                          : "border-zinc-800 hover:border-zinc-700",
+                      )}
                     >
                       <div className="font-bold">{dur}</div>
-                      <div className="text-xs text-[#9CA3AF]">min</div>
+                      <div className="text-xs text-zinc-400">min</div>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Focus Areas */}
-          <div className="bg-[#1a1a1a] border border-[#2A2A2A] rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-              <span>🎯</span> Focus Areas
-            </h3>
-            <p className="text-sm text-[#9CA3AF] mb-4">Select areas you want to emphasize</p>
+          <Card>
+            <CardContent>
+              <div className="flex items-start justify-between gap-6 mb-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-zinc-300" />
+                    Focus areas
+                  </CardTitle>
+                  <CardDescription>Select what you want to emphasize.</CardDescription>
+                </div>
+              </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {FOCUS_AREA_OPTIONS.map((area) => (
                 <button
                   key={area.id}
                   onClick={() => toggleFocusArea(area.id)}
-                  className={`p-3 rounded-lg border-2 transition-all text-sm ${
+                  className={cn(
+                    "p-3 rounded-xl border transition-colors text-sm",
                     focusAreas.includes(area.id)
-                      ? 'border-[#3B82F6] bg-[#3B82F6]/10'
-                      : 'border-[#2A2A2A] hover:border-[#3B82F6]/50'
-                  }`}
+                      ? "border-zinc-200 bg-zinc-50/5"
+                      : "border-zinc-800 hover:border-zinc-700",
+                  )}
                 >
                   {area.label}
                 </button>
               ))}
             </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Continue Button */}
           <div className="flex justify-between items-center pt-4">
-            <p className="text-sm text-[#6B7280]">
+            <p className="text-sm text-zinc-500">
               You can add your resume and job description on the next screen
             </p>
-            <button
-              onClick={handleContinue}
-              className="px-8 py-4 bg-[#3B82F6] hover:bg-[#2563EB] rounded-lg text-lg font-semibold transition-all hover:scale-105 shadow-lg shadow-[#3B82F6]/20"
-            >
-              Continue →
-            </button>
+            <Button onClick={handleContinue} size="lg">
+              Continue
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </main>
