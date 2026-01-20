@@ -435,10 +435,18 @@ export class InterviewAgent extends RealtimeAgent<Env> {
         this.logger.info("Participant joined", { name: participant.name });
         // Add a small delay to ensure pipeline is fully ready for audio production
         setTimeout(() => {
+          const greeting = `Hello ${persona.candidateName}! I'm ${persona.interviewerName}, ${persona.interviewerTitle} at ${persona.companyName}. Thanks for joining this ${scenario.name}. Let's begin when you're ready.`;
           this.logger.info("Speaking greeting after delay");
-          textProcessor.speak(
-            `Hello ${persona.candidateName}! I'm ${persona.interviewerName}, ${persona.interviewerTitle} at ${persona.companyName}. Thanks for joining this ${scenario.name}. Let's begin when you're ready.`,
-          );
+          textProcessor.speak(greeting);
+
+          // Add greeting to transcript so it appears in the report
+          this.insightGenerator
+            ?.processInterviewerUtterance(greeting)
+            .catch((err) => {
+              this.logger.warn("Failed to add greeting to transcript", {
+                error: String(err),
+              });
+            });
         }, 2000); // 2 second delay to ensure pipeline is ready
       });
 
