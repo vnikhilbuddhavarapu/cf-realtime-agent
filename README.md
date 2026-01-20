@@ -55,62 +55,6 @@
  └── utils/                    # RealtimeKit helpers, logging
 ```
 
- ## Architecture (high level)
-
- ```mermaid
- flowchart LR
-   U[Browser (React)]
-   API[Worker API routes]
-   SFU[Cloudflare RealtimeKit (WebRTC + SFU)]
-   IA[InterviewAgent (Durable Object)]
-   SM[SessionManager (Durable Object + SQLite)]
-   IG[InsightGenerator]
-   STT[Deepgram STT]
-   LLM[Workers AI]
-   TTS[ElevenLabs TTS]
-   V[(Vectorize)]
-
-   U -->|REST /api/*| API
-   API --> SM
-   API -->|init()| IA
-
-   U <--> |WebRTC audio| SFU
-   IA <--> |join + produce/consume| SFU
-
-   IA --> STT
-   STT --> LLM
-   LLM --> TTS
-   TTS --> IA
-
-   IA --> IG
-   IG -->|WebSocket /api/insights/ws| U
-
-   IA -->|RAG query| V
-   API -->|RAG index/upload| V
- ```
-
- ## STT-LLM-TTS Pipeline
-
- ```
- sequenceDiagram
-  participant User as User (mic)
-  participant SFU as RealtimeKit SFU
-  participant Agent as InterviewAgent (DO)
-  participant STT as Deepgram STT
-  participant LLM as Workers AI
-  participant TTS as ElevenLabs TTS
-
-  User->>SFU: WebRTC audio (mic frames)
-  SFU->>Agent: Incoming audio frames
-  Agent->>STT: Stream audio / request transcript
-  STT-->>Agent: Final transcript text
-  Agent->>LLM: Prompt (persona + scenario + timeboxing + optional RAG)
-  LLM-->>Agent: Response text
-  Agent->>TTS: Synthesize speech
-  TTS-->>Agent: Audio bytes/stream
-  Agent->>SFU: Publish audio into meeting
-  SFU-->>User: WebRTC audio (agent voice)
- ```
 
  ## Setup
 
